@@ -9,7 +9,6 @@ authors = [{name="Corey Spohn",email = "cas584@cornell.edu"}]
 description = "A unified interface for the various tools that create universes for exoplanet simulations"
 dependencies = ["matplotlib", "numpy", "pandas", "astropy", "keplertools", "EXOSIMS", "scipy"]
 license = {file="LICENSE"}
-# requres-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
