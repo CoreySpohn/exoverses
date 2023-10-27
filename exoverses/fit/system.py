@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from astropy.time import Time
 
+from exoverses.base.system import System
 from exoverses.fit.planet import FitPlanet
-from exoverses.system import System
 
 
 class FitSystem(System):

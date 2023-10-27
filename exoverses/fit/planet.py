@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 from astropy.time import Time
 
-import exoverses.util.orbits as misc
+import exoverses.util.misc as misc
 from exoverses.base.planet import Planet
 
 
