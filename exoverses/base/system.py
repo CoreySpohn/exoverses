@@ -75,7 +75,7 @@ class System:
         for planet in self.planets:
             syst_M.append(planet.mean_anom(times))
         Marr = np.stack(syst_M).value
-        self.rv_vals = (
+        rv_vals = (
             -kt.calc_RV_from_M(
                 Marr,
                 self.getpattr("e"),
@@ -84,10 +84,15 @@ class System:
             )
             * u.m
             / u.s
-        )
+        ).T
+        df = pd.DataFrame(rv_vals)
+        df["rv"] = df.sum(axis=1)
+        df["t"] = times
 
         # Storing as dataframe too
-        rv_df = pd.DataFrame(
-            np.stack((times, self.rv_vals.value), axis=-1), columns=["t", "rv"]
-        )
-        self.rv_df = rv_df
+
+        # rv_df = pd.DataFrame(
+        #     np.stack((times, rv_vals.value), axis=-1), columns=["t", "rv"]
+        # )
+        # self.rv_df = rv_df
+        return df

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from astropy.io.fits import getdata
 from astropy.time import Time
+from scipy.interpolate import interp2d
 
 import exoverses.base as base
 
@@ -17,21 +18,26 @@ class ExovistaPlanet(base.planet.Planet):
         # Get the object's data from the fits file
         with open(infile, "rb") as f:
             obj_data, obj_header = getdata(f, ext=fits_ext, header=True, memmap=False)
+            self.ev_wavelengths = getdata(f, ext=0, header=False, memmap=False) * u.um
 
         self.star = star
         # Time data, setting default epoch to the year 2000
-        self._t = obj_data[:, 0] * u.yr
-        self.t0 = Time(self._t[0].to(u.yr).value + 2000, format="decimalyear")
+        self.ev_t = obj_data[:, 0] * u.yr
+        self.t0 = Time(self.ev_t[0].to(u.yr).value + 2000, format="decimalyear")
 
-        # Position data
-        self._x = obj_data[:, 9] * u.AU
-        self._y = obj_data[:, 10] * u.AU
-        self._z = obj_data[:, 11] * u.AU
+        self.x_pix = obj_data[:, 1] * u.pixel
+        self.y_pix = obj_data[:, 2] * u.pixel
 
-        # Velocity data
-        self._vx = obj_data[:, 12] * u.AU / u.yr
-        self._vy = obj_data[:, 13] * u.AU / u.yr
-        self._vz = obj_data[:, 14] * u.AU / u.yr
+        # Barycentric position data
+        self.ev_x = obj_data[:, 9] * u.AU
+        self.ev_y = obj_data[:, 10] * u.AU
+        self.ev_z = obj_data[:, 11] * u.AU
+
+        # Barycentric velocity data
+        self.ev_vx = obj_data[:, 12] * u.AU / u.yr
+        self.ev_vy = obj_data[:, 13] * u.AU / u.yr
+        self.ev_vz = obj_data[:, 14] * u.AU / u.yr
+
         # Assign the planet's time-varying mean anomaly, argument of pericenter,
         # true anomaly, and contrast
         self.rep_w = (obj_data[:, 7] * u.deg + 180 * u.deg) % (2 * np.pi * u.rad)
@@ -39,7 +45,20 @@ class ExovistaPlanet(base.planet.Planet):
         self.nu = (self.rep_w + self.M) % (
             2 * np.pi * u.rad
         )  # true anomaly for circular orbits
-        self.contrast = obj_data[:, 15]
+        self.phase_angles = obj_data[:, 15]
+
+        self.contrast = obj_data[:, 16:]
+        self.contrast_interp = interp2d(
+            self.ev_wavelengths, self.ev_t, self.contrast, kind="quintic"
+        )
+
+        # Spectral flux density of the planet
+        self.planet_spec_flux_density_interp = interp2d(
+            self.ev_wavelengths,
+            self.ev_t,
+            np.multiply(self.contrast, star.ev_star_flux_density),
+            kind="quintic",
+        )
 
         # Initial mean anomaly
         self.M0 = self.nu[0]
@@ -103,16 +122,31 @@ class ExovistaPlanet(base.planet.Planet):
         # Propagation table
         self.vectors = pd.DataFrame(
             {
-                "t": [self._t[0].decompose().value],
-                "x": [self._x[0].decompose().value],
-                "y": [self._y[0].decompose().value],
-                "z": [self._z[0].decompose().value],
-                "vx": [self._vx[0].decompose().value],
-                "vy": [self._vy[0].decompose().value],
-                "vz": [self._vz[0].decompose().value],
+                "t": [self.ev_t[0].decompose().value],
+                "x": [self.ev_x[0].decompose().value],
+                "y": [self.ev_y[0].decompose().value],
+                "z": [self.ev_z[0].decompose().value],
+                "vx": [self.ev_vx[0].decompose().value],
+                "vy": [self.ev_vy[0].decompose().value],
+                "vz": [self.ev_vz[0].decompose().value],
             }
         )
 
         self.star = star
 
         # self.classify_planet()
+
+    def get_spec_flux_density(self, wavelengths, times):
+        """
+        Calculate the spectral flux density of the star at the given wavelengths
+        and times
+        Args:
+            wavelengths (astropy Quantity array):
+                Wavelengths to calculate spectral flux density
+            times (astropy Time array):
+                Times to calculate spectral flux density
+        Returns:
+            F (astropy Quantity array):
+                Spectral flux density values
+        """
+        return self.star_flux_density_interp(wavelengths, times) * u.Jy

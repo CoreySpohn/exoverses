@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.io.fits import getdata
+from scipy.interpolate import interp2d
 
 import exoverses.base as base
 
@@ -16,23 +17,30 @@ class ExovistaStar(base.star.Star):
     def __init__(self, infile):
         # Get the object's data from the fits file
         with open(infile, "rb") as f:
-            obj_data, obj_header = getdata(f, ext=3, header=True, memmap=False)
+            obj_data, obj_header = getdata(f, ext=4, header=True, memmap=False)
+            self.ev_wavelengths = getdata(f, ext=0, header=False, memmap=False) * u.um
 
-        # Time data
-        self._t = obj_data[:, 0] * u.yr
+        # The times that the exovista scene was generated at
+        self.ev_t = obj_data[:, 0] * u.yr
 
-        # Position data
-        self._x = obj_data[:, 9] * u.AU
-        self._y = obj_data[:, 10] * u.AU
-        self._z = obj_data[:, 11] * u.AU
+        # Positions at times the exovista scene was generated at
+        self.ev_x = obj_data[:, 9] * u.AU
+        self.ev_y = obj_data[:, 10] * u.AU
+        self.ev_z = obj_data[:, 11] * u.AU
 
-        # Velocity data
-        self._vx = obj_data[:, 12] * u.AU / u.yr
-        self._vy = obj_data[:, 13] * u.AU / u.yr
-        self._vz = obj_data[:, 14] * u.AU / u.yr
+        # Velocities at times the exovista scene was generated at
+        self.ev_vx = obj_data[:, 12] * u.AU / u.yr
+        self.ev_vy = obj_data[:, 13] * u.AU / u.yr
+        self.ev_vz = obj_data[:, 14] * u.AU / u.yr
+
+        # Load star's spectral flux density in Janskys
+        self.ev_star_flux_density = np.array(obj_data[:, 16:])
+        self.star_flux_density_interp = interp2d(
+            self.ev_wavelengths, self.ev_t, self.ev_star_flux_density, kind="quintic"
+        )
 
         # System identifiers
-        self.id = obj_header["STARID"]
+        self.id = obj_header["ID"]
         self.name = f"HIP {obj_header['HIP']}"
 
         # System midplane information
@@ -53,7 +61,7 @@ class ExovistaStar(base.star.Star):
 
         # Spectral properties
         self.spectral_type = obj_header["TYPE"]
-        self.MV = obj_header["M_V"]  # Absolute V band mag
+        self.MV = obj_header["M_V"] * u.mag  # Absolute V band mag
 
         # Commenting out for now, these are available but
         # not every star has all the information
@@ -66,22 +74,40 @@ class ExovistaStar(base.star.Star):
         # self.Kmag = obj_header["KMAG"]
 
         # Stellar properties
-        self.Lstar = obj_header["LSTAR"] * u.Lsun  # Bolometric luminosity
-        self.Teff = obj_header["TEFF"] * u.K  # Effective temperature
-        self.angdiam = obj_header["ANGDIAM"]  # Angular diameter
+        # Bolometric luminosity
+        self.luminosity = obj_header["LSTAR"] * u.Lsun
+        self.effective_temperature = obj_header["TEFF"] * u.K
+        self.angular_diameter = obj_header["ANGDIAM"] * u.mas
         self.mass = obj_header["MASS"] * u.M_sun
         self.radius = obj_header["RSTAR"] * u.R_sun
+        self.logg = obj_header["LOGG"] * u.cm / u.s**2
         self.mu = self.mass * const.G
+        self.pixel_scale = obj_header["PXSCLMAS"] * u.mas / u.pixel
 
         # Propagation table
         self.vectors = pd.DataFrame(
             {
-                "t": [self._t[0].decompose().value],
-                "x": [self._x[0].decompose().value],
-                "y": [self._y[0].decompose().value],
-                "z": [self._z[0].decompose().value],
-                "vx": [self._vx[0].decompose().value],
-                "vy": [self._vy[0].decompose().value],
-                "vz": [self._vz[0].decompose().value],
+                "t": [self.ev_t[0].decompose().value],
+                "x": [self.ev_x[0].decompose().value],
+                "y": [self.ev_y[0].decompose().value],
+                "z": [self.ev_z[0].decompose().value],
+                "vx": [self.ev_vx[0].decompose().value],
+                "vy": [self.ev_vy[0].decompose().value],
+                "vz": [self.ev_vz[0].decompose().value],
             }
         )
+
+    def spec_flux_density(self, wavelengths, times):
+        """
+        Calculate the spectral flux density of the star at the given wavelengths
+        and times
+        Args:
+            wavelengths (astropy Quantity array):
+                Wavelengths to calculate spectral flux density
+            times (astropy Time array):
+                Times to calculate spectral flux density
+        Returns:
+            F (astropy Quantity array):
+                Spectral flux density values
+        """
+        return self.star_flux_density_interp(wavelengths, times) * u.Jy

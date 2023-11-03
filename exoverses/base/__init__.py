@@ -1,1 +1,3 @@
-__all__ = ["universe", "system", "star", "planet"]
+from . import disk, planet, star, system, universe
+
+# __all__ = ["universe", "system", "star", "planet"]

@@ -13,14 +13,16 @@ class ExovistaSystem(System):
         self.file = infile
 
         # fits file extensions, exoVista hard codes these
-        planet_ext = 4
+        planet_ext = 5
+        disk_ext = 2
 
         # Get the number of planets
         with open(infile, "rb") as f:
             # read header of first extension
             h = getheader(f, ext=0, memmap=False)
-        n_ext = h["N_EXT"]  # get the largest extension
-        nplanets = n_ext - 3
+        # get the largest extension
+        n_ext = h["N_EXT"]
+        nplanets = n_ext - 4
 
         # Create star object
         self.star = ev.star.ExovistaStar(infile)
@@ -30,6 +32,7 @@ class ExovistaSystem(System):
             self.planets.append(
                 ev.planet.ExovistaPlanet(infile, planet_ext + i, self.star)
             )
+        self.disk = ev.disk.ExovistaDisk(infile, disk_ext, self.star)
 
         # self.cleanup()
 
