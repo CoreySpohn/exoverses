@@ -1,6 +1,7 @@
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
+import pandas as pd
 from astropy.time import Time
 from keplertools import fun as kt
 
@@ -12,10 +13,30 @@ class Planet:
     Class for a planet
     """
 
-    def __init__(self, planet_dict) -> None:
+    def __init__(self, planet_dict, star) -> None:
         for att, value in planet_dict.items():
             setattr(self, att, value)
-        # self.solve_dependent_params()
+        self.star = star
+        self.solve_dependent_params()
+
+    def __repr__(self):
+        """
+        Make dataframe with planet attributes
+        """
+        params = self.dump_params()
+        res = {}
+        for key, val in params.items():
+            if type(val) == u.Quantity:
+                res[key] = val.value
+            elif type(val) == Time:
+                res[key] = val.decimalyear
+            else:
+                res[key] = val
+
+        # Create dataframe from res dictionary
+        p_df = pd.DataFrame(res, index=[0])
+
+        return f"{type(self).__name__} object\n{p_df}"
 
     def dump_params(self):
         params = {

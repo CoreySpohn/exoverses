@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.io.fits import getdata
-from scipy.interpolate import interp2d
+from astropy.time import Time
+from scipy.interpolate import interp1d, interp2d
 
 import exoverses.base as base
 
@@ -18,25 +19,37 @@ class ExovistaStar(base.star.Star):
         # Get the object's data from the fits file
         with open(infile, "rb") as f:
             obj_data, obj_header = getdata(f, ext=4, header=True, memmap=False)
-            self.ev_wavelengths = getdata(f, ext=0, header=False, memmap=False) * u.um
+            self._wavelengths = getdata(f, ext=0, header=False, memmap=False) * u.um
 
-        # The times that the exovista scene was generated at
-        self.ev_t = obj_data[:, 0] * u.yr
+        # The times that the exovista scene was generated at, assuming
+        # it starts at J2000
+        self._t = Time(2000 + obj_data[:, 0], format="decimalyear")
+
+        # Interpolate the x position of the star
+        self._x_pix = obj_data[:, 1] * u.pixel
+        self._y_pix = obj_data[:, 2] * u.pixel
+        _x_pix_interp = interp1d(self._t.jd, self._x_pix.value, kind="cubic")
+        _y_pix_interp = interp1d(self._t.jd, self._y_pix.value, kind="cubic")
+        self._x_pix_interp = lambda t: _x_pix_interp(t.jd)
+        self._y_pix_interp = lambda t: _y_pix_interp(t.jd)
 
         # Positions at times the exovista scene was generated at
-        self.ev_x = obj_data[:, 9] * u.AU
-        self.ev_y = obj_data[:, 10] * u.AU
-        self.ev_z = obj_data[:, 11] * u.AU
+        self._x = obj_data[:, 9] * u.AU
+        self._y = obj_data[:, 10] * u.AU
+        self._z = obj_data[:, 11] * u.AU
 
         # Velocities at times the exovista scene was generated at
-        self.ev_vx = obj_data[:, 12] * u.AU / u.yr
-        self.ev_vy = obj_data[:, 13] * u.AU / u.yr
-        self.ev_vz = obj_data[:, 14] * u.AU / u.yr
+        self._vx = obj_data[:, 12] * u.AU / u.yr
+        self._vy = obj_data[:, 13] * u.AU / u.yr
+        self._vz = obj_data[:, 14] * u.AU / u.yr
 
         # Load star's spectral flux density in Janskys
-        self.ev_star_flux_density = np.array(obj_data[:, 16:])
+        self._star_flux_density = np.array(obj_data[:, 16:])
         self.star_flux_density_interp = interp2d(
-            self.ev_wavelengths, self.ev_t, self.ev_star_flux_density, kind="quintic"
+            self._wavelengths,
+            self._t.decimalyear * u.yr,
+            self._star_flux_density,
+            kind="quintic",
         )
 
         # System identifiers
@@ -87,13 +100,13 @@ class ExovistaStar(base.star.Star):
         # Propagation table
         self.vectors = pd.DataFrame(
             {
-                "t": [self.ev_t[0].decompose().value],
-                "x": [self.ev_x[0].decompose().value],
-                "y": [self.ev_y[0].decompose().value],
-                "z": [self.ev_z[0].decompose().value],
-                "vx": [self.ev_vx[0].decompose().value],
-                "vy": [self.ev_vy[0].decompose().value],
-                "vz": [self.ev_vz[0].decompose().value],
+                "t": [self._t[0].decimalyear],
+                "x": [self._x[0].decompose().value],
+                "y": [self._y[0].decompose().value],
+                "z": [self._z[0].decompose().value],
+                "vx": [self._vx[0].decompose().value],
+                "vy": [self._vy[0].decompose().value],
+                "vz": [self._vz[0].decompose().value],
             }
         )
 

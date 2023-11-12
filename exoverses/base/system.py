@@ -10,8 +10,13 @@ class System:
     Class for a single system. Must have a star and a list of planets.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, star=None, planets=None, disk=None) -> None:
+        self.star = star
+        self.planets = planets
+        self.disk = disk
+        if self.planets is not None:
+            self.pInds = np.arange(len(self.planets))
+            self.cleanup()
 
     def __repr__(self):
         return (

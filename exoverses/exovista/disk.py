@@ -10,10 +10,8 @@ class ExovistaDisk(base.disk.Disk):
     def __init__(self, infile, fits_ext, star):
         self.star = star
         with open(infile, "rb") as f:
-            obj_data, obj_header = fits.getdata(
-                f, ext=fits_ext, header=True, memmap=False
-            )
-            self.ev_wavelengths = (
+            obj_data, _ = fits.getdata(f, ext=fits_ext, header=True, memmap=False)
+            self._wavelengths = (
                 fits.getdata(f, ext=fits_ext - 1, header=False, memmap=False) * u.um
             )
 
@@ -23,7 +21,7 @@ class ExovistaDisk(base.disk.Disk):
         self.contrast = obj_data[:-1]
 
         self.disk_contrast_interp = interp1d(
-            np.arange(len(self.ev_wavelengths)),
+            np.arange(len(self._wavelengths)),
             self.contrast,
             kind="cubic",
             axis=0,
@@ -32,7 +30,8 @@ class ExovistaDisk(base.disk.Disk):
     def spec_flux_density(self, wavelengths, times):
         """
         Calculate the spectral flux density of the disk at the given times and
-        wavelengths
+        wavelengths. Note that this is a per pixel calculation, and is
+        inherenetly tied to the pixel scale of the disk.
         Args:
             wavelengths (astropy Quantity array):
                 Wavelengths to calculate the spectral flux density at
@@ -45,7 +44,7 @@ class ExovistaDisk(base.disk.Disk):
         """
         # Determine the indices the wavelengths we want to calculate the scene
         # are with respect to the disk wavelengths
-        inds = np.searchsorted(self.ev_wavelengths, wavelengths) - 1
+        inds = np.searchsorted(self._wavelengths, wavelengths) - 1
 
         # Determine the fractional index, with respect to the indices of the
         # wavelengths the disk was generated at, of the wavelengths we want to
@@ -53,10 +52,10 @@ class ExovistaDisk(base.disk.Disk):
         # wavelength index instead of the actual wavelength
         fracinds = inds + (
             np.log(wavelengths.to(u.um).value)
-            - np.log(self.ev_wavelengths[inds].to(u.um).value)
+            - np.log(self._wavelengths[inds].to(u.um).value)
         ) / (
-            np.log(self.ev_wavelengths[inds + 1].to(u.um).value)
-            - np.log(self.ev_wavelengths[inds].to(u.um).value)
+            np.log(self._wavelengths[inds + 1].to(u.um).value)
+            - np.log(self._wavelengths[inds].to(u.um).value)
         )
         # Interpolate the disk to our desired wavelengths
         disk_contrast = self.disk_contrast_interp(fracinds).T
