@@ -46,9 +46,8 @@ class ExovistaPlanet(base.planet.Planet):
         # true anomaly, and contrast
         self.rep_w = (obj_data[:, 7] * u.deg + 180 * u.deg) % (2 * np.pi * u.rad)
         self.M = (obj_data[:, 8] * u.deg + 180 * u.deg) % (2 * np.pi * u.rad)
-        self.nu = (self.rep_w + self.M) % (
-            2 * np.pi * u.rad
-        )  # true anomaly for circular orbits
+        # true anomaly for circular orbits
+        self.nu = (self.rep_w + self.M) % (2 * np.pi * u.rad)
         self.phase_angles = obj_data[:, 15]
 
         self.contrast = obj_data[:, 16:]
@@ -81,7 +80,7 @@ class ExovistaPlanet(base.planet.Planet):
             "M0": self.M0,
             "p": 0.2,
         }
-        base.planet.Planet.__init__(self, planet_dict)
+        base.planet.Planet.__init__(self, planet_dict, star)
         self.solve_dependent_params()
 
         # Assign the planet's keplerian orbital elements

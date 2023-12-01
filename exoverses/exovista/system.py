@@ -43,6 +43,10 @@ class ExovistaSystem(System):
             )
         self.disk = ev.disk.ExovistaDisk(infile, disk_ext, self.star)
         self.ndisk_wavelengths = len(self.disk._wavelengths)
+
+        # mas/pixel
+        self.pixel_scale = self.star.pixel_scale
+
         # self.ndisk_times = len(self.disk.ev_t)
 
         # self.cleanup()

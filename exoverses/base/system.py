@@ -68,7 +68,22 @@ class System:
 
         return p_df
 
-    def propagate(self, times):
+    def propagate_img(self, times):
+        """
+        Propagates system at all times given. Currently does not handle
+        """
+        # Get unique time values, multiple instruments can be scheduled to
+        # observe at the same time
+
+        times = Time(np.unique(times.jd), format="jd")
+        # Calculate planet positions at all times
+        syst_M = []
+        for planet in self.planets:
+            syst_M.append(planet.mean_anom(times))
+        breakpoint()
+        E = kt.eccanom_orvara(np.stack(syst_M).value, self.getpattr("e"))
+
+    def propagate_rv(self, times):
         """
         Propagates system at all times given. Currently does not handle
         """
