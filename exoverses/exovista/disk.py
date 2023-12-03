@@ -78,7 +78,7 @@ class ExovistaDisk(base.disk.Disk):
 
         disk_flux_density = np.zeros(shape) * u.Jy
         # Calculate the star's spectral flux density at the desired wavelengths
-        star_flux_density = self.star.spec_flux_density(wavelengths, times.decimalyear)
+        star_flux_density = self.star.spec_flux_density(wavelengths, times)
         if not single_eval:
             for i, _ in enumerate(times):
                 disk_flux_density[i] = np.multiply(

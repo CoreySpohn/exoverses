@@ -155,4 +155,6 @@ class ExovistaPlanet(base.planet.Planet):
             F (astropy Quantity array):
                 Spectral flux density values
         """
-        return self.planet_spec_flux_density_interp(wavelengths, times) * u.Jy
+        return (
+            self.planet_spec_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
+        )

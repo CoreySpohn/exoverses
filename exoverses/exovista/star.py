@@ -123,4 +123,4 @@ class ExovistaStar(base.star.Star):
             F (astropy Quantity array):
                 Spectral flux density values
         """
-        return self.star_flux_density_interp(wavelengths, times) * u.Jy
+        return self.star_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
