@@ -61,19 +61,29 @@ class ExovistaDisk(base.disk.Disk):
         disk_contrast = self.disk_contrast_interp(fracinds).T
 
         # Instantiate the disk flux density cube
-        disk_flux_density = (
-            np.zeros(
-                (
-                    len(times),
-                    len(wavelengths),
-                    self.contrast.shape[1],
-                    self.contrast.shape[2],
-                )
-            )
-            * u.Jy
-        )
+        shape = []
+        single_eval = times.isscalar and wavelengths.isscalar
+
+        if times.isscalar:
+            shape.append(1)
+        else:
+            shape.append(len(times))
+        if wavelengths.isscalar:
+            shape.append(1)
+        else:
+            shape.append(len(wavelengths))
+        shape.append(self.contrast.shape[1])
+        shape.append(self.contrast.shape[2])
+        shape = tuple(shape)
+
+        disk_flux_density = np.zeros(shape) * u.Jy
         # Calculate the star's spectral flux density at the desired wavelengths
-        star_flux_density = self.star.spec_flux_density(wavelengths, times)
-        for i, _ in enumerate(times):
-            disk_flux_density[i] = np.multiply(disk_contrast, star_flux_density[i]).T
+        star_flux_density = self.star.spec_flux_density(wavelengths, times.decimalyear)
+        if not single_eval:
+            for i, _ in enumerate(times):
+                disk_flux_density[i] = np.multiply(
+                    disk_contrast, star_flux_density[i]
+                ).T
+        else:
+            disk_flux_density = np.multiply(disk_contrast, star_flux_density).T
         return disk_flux_density
