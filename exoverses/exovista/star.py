@@ -57,8 +57,10 @@ class ExovistaStar(base.star.Star):
         self.name = f"HIP {obj_header['HIP']}"
 
         # System midplane information
-        self.midplane_PA = (obj_header["PA"] * u.deg).to(u.rad)  # Position angle
-        self.midplane_I = np.abs((obj_header["I"] * u.deg).to(u.rad))  # Inclination
+        # I don't know why the PA is negative, but to match the exovista
+        # output positions it has to be
+        self.midplane_PA = obj_header["PA"] * u.deg  # Position angle
+        self.midplane_I = obj_header["I"] * u.deg  # Inclination
         # if self.midplane_I < 0:
         #     breakpoint()
 

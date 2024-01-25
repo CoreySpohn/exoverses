@@ -44,8 +44,8 @@ class ExovistaPlanet(base.planet.Planet):
 
         # Assign the planet's time-varying mean anomaly, argument of pericenter,
         # true anomaly, and contrast
-        self.rep_w = (obj_data[:, 7] * u.deg + 180 * u.deg) % (2 * np.pi * u.rad)
-        self.M = (obj_data[:, 8] * u.deg + 180 * u.deg) % (2 * np.pi * u.rad)
+        self.rep_w = (obj_data[:, 7] * u.deg) % (2 * np.pi * u.rad)
+        self.M = (obj_data[:, 8] * u.deg) % (2 * np.pi * u.rad)
         # true anomaly for circular orbits
         self.nu = (self.rep_w + self.M) % (2 * np.pi * u.rad)
         self.phase_angles = obj_data[:, 15]
@@ -67,14 +67,16 @@ class ExovistaPlanet(base.planet.Planet):
         )
 
         # Initial mean anomaly
-        self.M0 = self.nu[0]
+        # breakpoint()
+        # self.M0 = self.nu[0]
+        self.M0 = self.M[0]
         planet_dict = {
             "t0": self.t0,
             "a": obj_header["A"] * u.AU,
             "e": obj_header["E"],
-            "inc": (obj_header["I"] * u.deg).to(u.rad) + star.midplane_I,
-            "W": (obj_header["LONGNODE"] * u.deg).to(u.rad),
-            "w": 0 * u.rad,
+            "inc": (obj_header["I"] * u.deg),
+            "W": (obj_header["LONGNODE"] * u.deg),
+            "w": (obj_header["ARGPERI"] * u.deg),
             "mass": obj_header["M"] * u.M_earth,
             "radius": obj_header["R"] * u.R_earth,
             "M0": self.M0,

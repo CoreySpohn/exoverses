@@ -69,13 +69,14 @@ class Planet:
         # This will find the radial and velocity vectors at an epoch
         M = self.mean_anom(t)
         E = kt.eccanom(M.to(u.rad).value, self.e)
-        a, e, Omega, inc, w = (
-            self.a.decompose(),
+        orb_elem = (
+            self.a.decompose().value,
             self.e,
             self.W.to(u.rad).value,
             self.inc.to(u.rad).value,
             self.w.to(u.rad).value,
         )
+        a, e, Omega, inc, w = orb_elem
         if not np.isscalar(E):
             a = np.ones(len(E)) * a
             e = np.ones(len(E)) * e
@@ -116,7 +117,6 @@ class Planet:
                 r = np.matmul(A, np.diag(np.cos(E) - e)) + np.matmul(
                     B, np.diag(np.sin(E))
                 )
-            return r
 
         # Calculate velocity vectors
         if return_v:
@@ -134,19 +134,20 @@ class Planet:
                     np.diag(np.sqrt(self.mu * a ** (-3.0)) / (1 - e * np.cos(E))),
                 )
 
+        ktr, ktv = kt.orbElem2vec(E, self.mu.value, np.array(orb_elem))
         # Rotate around x axis with midplane inclination
         rot1 = np.array(
             [
                 [1, 0, 0],
                 [
                     0,
-                    np.cos(self.star.midplane_I.to(u.rad)),
-                    -np.sin(self.star.midplane_I.to(u.rad)),
+                    np.cos(self.star.midplane_I),
+                    np.sin(self.star.midplane_I),
                 ],
                 [
                     0,
-                    np.sin(self.star.midplane_I.to(u.rad)),
-                    np.cos(self.star.midplane_I.to(u.rad)),
+                    -np.sin(self.star.midplane_I),
+                    np.cos(self.star.midplane_I),
                 ],
             ]
         )
@@ -155,24 +156,26 @@ class Planet:
         rot2 = np.array(
             [
                 [
-                    np.cos(self.star.midplane_PA.to(u.rad)),
-                    np.sin(self.star.midplane_PA.to(u.rad)),
+                    np.cos(-self.star.midplane_PA),
+                    np.sin(-self.star.midplane_PA),
                     0,
                 ],
                 [
-                    -np.sin(self.star.midplane_PA.to(u.rad)),
-                    np.cos(self.star.midplane_PA.to(u.rad)),
+                    -np.sin(-self.star.midplane_PA),
+                    np.cos(-self.star.midplane_PA),
                     0,
                 ],
-                [0, 0, 1],
+                [0, 0, -1],
             ]
         )
         if return_r:
-            r = np.matmul(r.T, rot1)
-            r = np.matmul(r, rot2)
+            r = np.dot(rot1, r)
+            r = np.dot(rot2, r)
+            r = r * u.m
         if return_v:
-            v = np.matmul(v.T, rot1)
-            v = np.matmul(v, rot2)
+            v = np.dot(rot1, v)
+            v = np.dot(rot2, v)
+            v = v * u.m / u.s
 
         if return_r and return_v:
             return r, v
