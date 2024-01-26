@@ -99,19 +99,6 @@ class ExovistaStar(base.star.Star):
         self.mu = self.mass * const.G
         self.pixel_scale = obj_header["PXSCLMAS"] * u.mas / u.pixel
 
-        # Propagation table
-        self.vectors = pd.DataFrame(
-            {
-                "t": [self._t[0].decimalyear],
-                "x": [self._x[0].decompose().value],
-                "y": [self._y[0].decompose().value],
-                "z": [self._z[0].decompose().value],
-                "vx": [self._vx[0].decompose().value],
-                "vy": [self._vy[0].decompose().value],
-                "vz": [self._vz[0].decompose().value],
-            }
-        )
-
     def spec_flux_density(self, wavelengths, times):
         """
         Calculate the spectral flux density of the star at the given wavelengths

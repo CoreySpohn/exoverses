@@ -2,6 +2,7 @@ import astropy.units as u
 import numpy as np
 from astropy import constants as c
 from scipy.optimize import root
+from scipy.spatial.transform import Rotation as R
 
 """
 Functions from radvel, should either rework or go back to calling radvel
@@ -153,3 +154,19 @@ def Msini(K, P, Mstar, e, Msini_units="earth"):
         raise Exception("Msini_units must be 'earth', or 'jupiter'")
 
     return Msini
+
+
+def rotate_vectors(vectors, axis, angle):
+    """
+    Rotates a set of Nx3 vectors around a single axis by a single angle
+    Args:
+        vectors (np.array):
+            Nx3 array of vectors
+        axis (list):
+            3-element array specifying rotation axis (e.g. [0,0,1]
+            for z-axis)
+        angle (u.Quantity):
+            Angle to rotate vectors by
+    """
+    rot = R.from_rotvec(np.array(axis) * angle.to(u.rad).value)
+    return rot.apply(vectors)

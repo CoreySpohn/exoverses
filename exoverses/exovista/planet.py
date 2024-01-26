@@ -6,6 +6,7 @@ from astropy.time import Time
 from scipy.interpolate import interp1d, interp2d
 
 import exoverses.base as base
+import exoverses.util.misc as misc
 
 
 class ExovistaPlanet(base.planet.Planet):
@@ -85,61 +86,6 @@ class ExovistaPlanet(base.planet.Planet):
         base.planet.Planet.__init__(self, planet_dict, star)
         self.solve_dependent_params()
 
-        # Assign the planet's keplerian orbital elements
-        # self.a = obj_header["A"] * u.AU
-        # self.e = obj_header["E"]
-        # self.inc = (obj_header["I"] * u.deg).to(u.rad)
-        # self.W = (obj_header["LONGNODE"] * u.deg).to(u.rad)
-        # # self.w = (obj_header["ARGPERI"] * u.deg).to(u.rad)
-        # self.w = 0 * u.rad
-
-        # # Assign the planet's mass/radius information
-        # self.mass = obj_header["M"] * u.M_earth
-        # self.radius = obj_header["R"] * u.R_earth
-
-        # # Gravitational parameter
-        # self.mu = (const.G * (self.mass + star.mass)).decompose()
-        # self.T = (2 * np.pi * np.sqrt(self.a**3 / self.mu)).to(u.d)
-        # self.w_p = self.w
-        # self.w_s = (self.w + np.pi * u.rad) % (2 * np.pi * u.rad)
-        # self.secosw = np.sqrt(self.e) * np.cos(self.w)
-        # self.sesinw = np.sqrt(self.e) * np.sin(self.w)
-
-        # Because we have the mean anomaly at an epoch we can calculate the
-        # time of periastron as t0 - T_e where T_e is the time since periastron
-        # passage
-        # T_e = (self.T * self.M0 / (2 * np.pi * u.rad)).decompose()
-        # self.T_p = self.t0 - T_e
-
-        # Calculate the time of conjunction
-        # self.T_c = Time(
-        #     rvo.timeperi_to_timetrans(
-        #         self.T_p.jd, self.T.value, self.e, self.w_s.value
-        #     ),
-        #     format="jd",
-        # )
-        # self.K = (
-        #     (2 * np.pi * const.G / self.T) ** (1 / 3.0)
-        #     * (self.mass * np.sin(self.inc) / star.mass ** (2 / 3.0))
-        #     * (1 - self.e**2) ** (-1 / 2)
-        # ).decompose()
-
-        # # Mean angular motion
-        # self.n = (np.sqrt(self.mu / self.a**3)).decompose() * u.rad
-
-        # Propagation table
-        self.vectors = pd.DataFrame(
-            {
-                "t": [self._t[0].decimalyear],
-                "x": [self._x[0].decompose().value],
-                "y": [self._y[0].decompose().value],
-                "z": [self._z[0].decompose().value],
-                "vx": [self._vx[0].decompose().value],
-                "vy": [self._vy[0].decompose().value],
-                "vz": [self._vz[0].decompose().value],
-            }
-        )
-
         self.star = star
 
         # self.classify_planet()
@@ -160,3 +106,34 @@ class ExovistaPlanet(base.planet.Planet):
         return (
             self.planet_spec_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
         )
+
+    def rotate_to_sky_coords(self, vec, roll_angle=0 * u.rad):
+        """
+        Rotate from barycentric coordinates to plane of the sky, this is set up
+        to match the exovista data
+
+        Args:
+            vec (np.array):
+                Nx3 array of vectors in system-plane coordinates
+            roll_angle (astropy Quantity):
+                Angle to rotate the vectors by in the plane of the sky to simulate
+                roll of the telescope
+
+        Returns:
+            vec (np.array):
+                Nx3 array of vectors rotated to sky coordinates
+
+        """
+        # Rotate around x axis with midplane inclination
+        vec = misc.rotate_vectors(vec.T, [1, 0, 0], -self.star.midplane_I)
+
+        # Rotate around z axis with midplane position angle
+        vec = misc.rotate_vectors(vec, [0, 0, 1], self.star.midplane_PA)
+
+        # Flip around z axis
+        vec[:, 2] = -vec[:, 2]
+
+        if roll_angle != 0 * u.rad:
+            # Rotate around y axis with roll angle
+            vec = misc.rotate_vectors(vec, [0, 0, 1], roll_angle)
+        return vec

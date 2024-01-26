@@ -55,7 +55,8 @@ class Planet:
 
     def calc_vectors(self, t, return_r=True, return_v=False):
         """
-        Given a time, calculate the planet's position and/or velocity vectors
+        Given a time, calculate the planet's barycentric position and/or
+        velocity vectors
         Args:
             t (Time):
                 Time to calculate the position vectors at
@@ -83,27 +84,28 @@ class Planet:
             Omega = np.ones(len(E)) * Omega
             inc = np.ones(len(E)) * inc
             w = np.ones(len(E)) * w
+
+        sinw = np.sin(w)
+        cosw = np.cos(w)
+        sinO = np.sin(Omega)
+        cosO = np.cos(Omega)
+        sininc = np.sin(inc)
+        cosinc = np.cos(inc)
+        asqrt1me2 = a * np.sqrt(1 - e**2)
+
         A = np.vstack(
             (
-                a
-                * (np.cos(Omega) * np.cos(w) - np.sin(Omega) * np.cos(inc) * np.sin(w)),
-                a
-                * (np.sin(Omega) * np.cos(w) + np.cos(Omega) * np.cos(inc) * np.sin(w)),
-                a * np.sin(inc) * np.sin(w),
+                a * (cosO * cosw - sinO * cosinc * sinw),
+                a * (sinO * cosw + cosO * cosinc * sinw),
+                a * sininc * sinw,
             )
         )
 
         B = np.vstack(
             (
-                -a
-                * np.sqrt(1 - e**2)
-                * (np.cos(Omega) * np.sin(w) + np.sin(Omega) * np.cos(inc) * np.cos(w)),
-                a
-                * np.sqrt(1 - e**2)
-                * (
-                    -np.sin(Omega) * np.sin(w) + np.cos(Omega) * np.cos(inc) * np.cos(w)
-                ),
-                a * np.sqrt(1 - e**2) * np.sin(inc) * np.cos(w),
+                -asqrt1me2 * (cosO * sinw + sinO * cosinc * cosw),
+                asqrt1me2 * (-sinO * sinw + cosO * cosinc * cosw),
+                asqrt1me2 * sininc * cosw,
             )
         )
 
@@ -117,6 +119,7 @@ class Planet:
                 r = np.matmul(A, np.diag(np.cos(E) - e)) + np.matmul(
                     B, np.diag(np.sin(E))
                 )
+            r = self.rotate_to_sky_coords(r).T * u.m
 
         # Calculate velocity vectors
         if return_v:
@@ -133,49 +136,7 @@ class Planet:
                     + np.matmul(B, np.diag(np.cos(E))),
                     np.diag(np.sqrt(self.mu * a ** (-3.0)) / (1 - e * np.cos(E))),
                 )
-
-        ktr, ktv = kt.orbElem2vec(E, self.mu.value, np.array(orb_elem))
-        # Rotate around x axis with midplane inclination
-        rot1 = np.array(
-            [
-                [1, 0, 0],
-                [
-                    0,
-                    np.cos(self.star.midplane_I),
-                    np.sin(self.star.midplane_I),
-                ],
-                [
-                    0,
-                    -np.sin(self.star.midplane_I),
-                    np.cos(self.star.midplane_I),
-                ],
-            ]
-        )
-
-        # Rotate around z axis with midplane position angle
-        rot2 = np.array(
-            [
-                [
-                    np.cos(-self.star.midplane_PA),
-                    np.sin(-self.star.midplane_PA),
-                    0,
-                ],
-                [
-                    -np.sin(-self.star.midplane_PA),
-                    np.cos(-self.star.midplane_PA),
-                    0,
-                ],
-                [0, 0, -1],
-            ]
-        )
-        if return_r:
-            r = np.dot(rot1, r)
-            r = np.dot(rot2, r)
-            r = r * u.m
-        if return_v:
-            v = np.dot(rot1, v)
-            v = np.dot(rot2, v)
-            v = v * u.m / u.s
+            v = self.rotate_to_sky_coords(v).T * u.m / u.s
 
         if return_r and return_v:
             return r, v
@@ -183,6 +144,12 @@ class Planet:
             return r
         if return_v:
             return v
+
+    def rotate_to_sky_coords(self, vec):
+        """
+        Rotate the given vector to the sky coordinates, stub in the base class
+        """
+        return vec
 
     def mean_anom(self, times):
         """

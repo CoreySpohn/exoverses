@@ -1,8 +1,12 @@
+import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import pandas as pd
+import rebound
+import xarray as xr
 from astropy.time import Time
 from keplertools import fun as kt
+from tqdm import tqdm
 
 
 class System:
@@ -116,3 +120,81 @@ class System:
         # )
         # self.rv_df = rv_df
         return df
+
+    def nbody_vectors(self, times, return_r=True, return_v=False):
+        """
+        Calculate the barycentric position and velocity vectors of all bodies in the system
+        at the given times using rebound.
+        """
+        # Set up rebound simulation
+        sim = rebound.Simulation()
+        sim.G = const.G.value
+        times_jd = times.utc.jd
+        sim.t = times_jd[0]
+        times = times.datetime64
+
+        # Add the star and planets to the simulation, currently assuming no binary systems
+        n_stars = 1
+        n_planets = len(self.planets)
+        sim = self.add_objects_to_rebound(sim)
+        sim.move_to_com()
+
+        data_vars = ["x", "y", "z", "vx", "vy", "vz"]
+        coords = {
+            "time": times,
+            "body_type": ["star", "planet"],
+            "body_index": np.arange(max(n_stars, n_planets)),
+            "variable": data_vars,
+        }
+        da = xr.DataArray(
+            np.nan, coords=coords, dims=["time", "body_type", "body_index", "variable"]
+        )
+        da.attrs["units"] = {
+            "x": u.m,
+            "y": u.m,
+            "z": u.m,
+            "vx": u.m / u.s,
+            "vy": u.m / u.s,
+            "vz": u.m / u.s,
+        }
+
+        for time_jd, time in tqdm(
+            zip(times_jd, times), total=len(times), desc="n-body system propagation"
+        ):
+            sim.integrate(time_jd)
+            for j, p in enumerate(sim.particles):
+                body_type = "star" if j < n_stars else "planet"
+                body_index = j if j < n_stars else j - n_stars
+
+                da.loc[time, body_type, body_index, "x"] = p.x
+                da.loc[time, body_type, body_index, "y"] = p.y
+                da.loc[time, body_type, body_index, "z"] = p.z
+                da.loc[time, body_type, body_index, "vx"] = p.vx
+                da.loc[time, body_type, body_index, "vy"] = p.vy
+                da.loc[time, body_type, body_index, "vz"] = p.vz
+        return da
+
+    def add_objects_to_rebound(self, sim):
+        """
+        Method that adds the star and planets to the rebound simulation
+        """
+        sim.add(
+            m=self.star.mass.decompose().value,
+            x=self.star._x[0].decompose().value,
+            y=self.star._y[0].decompose().value,
+            z=self.star._z[0].decompose().value,
+            vx=self.star._vx[0].decompose().value,
+            vy=self.star._vy[0].decompose().value,
+            vz=self.star._vz[0].decompose().value,
+        )
+        for planet in self.planets:
+            sim.add(
+                m=planet.mass.decompose().value,
+                x=planet._x[0].decompose().value,
+                y=planet._y[0].decompose().value,
+                z=planet._z[0].decompose().value,
+                vx=planet._vx[0].decompose().value,
+                vy=planet._vy[0].decompose().value,
+                vz=planet._vz[0].decompose().value,
+            )
+        return sim

@@ -110,3 +110,28 @@ class ExovistaSystem(System):
         # Calculate the spectral flux density of the disk
         disk_flux_density = self.disk.spec_flux_density(wavelengths, times)
         return star_flux_density, planet_flux_density, disk_flux_density
+
+    def add_objects_to_rebound(self, sim):
+        """
+        Method that adds the star and planets to the rebound simulation
+        """
+        sim.add(
+            m=self.star.mass.decompose().value,
+            x=self.star._x[0].decompose().value,
+            y=self.star._y[0].decompose().value,
+            z=self.star._z[0].decompose().value,
+            vx=self.star._vx[0].decompose().value,
+            vy=self.star._vy[0].decompose().value,
+            vz=self.star._vz[0].decompose().value,
+        )
+        for planet in self.planets:
+            sim.add(
+                m=planet.mass.decompose().value,
+                x=planet._x[0].decompose().value,
+                y=planet._y[0].decompose().value,
+                z=planet._z[0].decompose().value,
+                vx=planet._vx[0].decompose().value,
+                vy=planet._vy[0].decompose().value,
+                vz=planet._vz[0].decompose().value,
+            )
+        return sim
