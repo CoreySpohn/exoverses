@@ -1,3 +1,4 @@
+import astropy.constants as const
 import astropy.units as u
 import numpy as np
 from astropy.io.fits import getheader
@@ -46,6 +47,9 @@ class ExovistaSystem(System):
 
         # mas/pixel
         self.pixel_scale = self.star.pixel_scale
+
+        # What the nbody simulation frame is
+        self.nbody_frame = "bary-sky"
 
         self.planet_cleanup()
         self.star_cleanup()

@@ -209,6 +209,42 @@ def gen_rotate_to_sky_coords(
     return vector
 
 
+def gen_rotate_to_local_ecliptic_coords(
+    vector, inclination, position_angle, convention="exovista"
+):
+    """
+    Rotate from plane-of-the-sky coordinates to local ecliptic, this is set up
+    to match the exovista data
+
+    Args:
+        vec (np.array):
+            Nx3 array of [x,y,z] vectors in barycentric coordinates
+        inclination (astropy Quantity):
+            Inclination of the system
+        position_angle (astropy Quantity):
+            Position angle of the system
+        convention (str):
+            Convention that describes the transormation to be applied
+
+    Returns:
+        vec (np.array):
+            Nx3 array of vectors rotated to sky coordinates
+    """
+    if convention == "exovista":
+        # Flip around z axis
+        vector[:, 2] = -vector[:, 2]
+
+        # Rotate around z axis with midplane position angle
+        vector = rotate_vectors(vector, [0, 0, 1], -position_angle)
+
+        # Rotate around x axis with midplane inclination
+        vector = rotate_vectors(vector, [1, 0, 0], inclination)
+
+    else:
+        raise Exception("No other conventions currently supported :(")
+    return vector
+
+
 # def add_units(ds, new_unit, vars=["x", "y", "z"], new_unit_params=None):
 #     """
 #     Add units to a dataset by adding a new data variable with the

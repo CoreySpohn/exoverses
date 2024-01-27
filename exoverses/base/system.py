@@ -27,6 +27,8 @@ class System:
         if self.star is not None:
             self.star_cleanup()
 
+        self.nbody_frame = "bary"
+
     def __repr__(self):
         return (
             f"{self.star.name}\tdist:{self.star.dist}\t"
@@ -140,7 +142,7 @@ class System:
 
     def create_dataset(self, times):
         """
-        Create an xarray Dataset for the system's barycentric motion
+        Create an xarray Dataset for the system's motion
         """
         timesd64 = times.datetime64
         n_stars = 1
@@ -150,13 +152,14 @@ class System:
             "time": timesd64,
             "object": ["star", "planet", "disk", "fit"],
             "index": np.arange(max(n_stars, n_planets)),
-            "frame": ["barycentric", "sky"],
+            "frame": ["bary", "helio", "bary-sky", "helio-sky"],
+            "prop": ["kepler", "nbody"],
         }
 
         data_vars = {
             var: (
-                ["time", "object", "index", "frame"],
-                np.nan * np.ones((len(timesd64), 4, max(n_stars, n_planets), 2)),
+                ["time", "object", "index", "frame", "prop"],
+                np.nan * np.ones((len(timesd64), 4, max(n_stars, n_planets), 4, 2)),
             )
             for var in state_vars
         }
@@ -168,78 +171,154 @@ class System:
             ds[var].attrs["unit"] = u.m if var in ["x", "y", "z"] else u.m / u.s
         return ds
 
-    def prop_kepler(self, times):
+    def prop_kepler(self, times, ds):
         """
         Calculate the barycentric position and velocity vectors of the planets
         in the system at the given times.
         """
-        ds = self.create_dataset(times)
         for i, planet in enumerate(self.planets):
             # Calculate the position and velocity vectors
             r, v = planet.calc_vectors(times, return_v=True)
             for j, coord in enumerate(["x", "y", "z"]):
-                ds[coord].loc[times.datetime64, "planet", i, "barycentric"] = (
+                ds[coord].loc[times.datetime64, "planet", i, "bary", "kepler"] = (
                     r[j].to(u.m).value
                 )
             for j, coord in enumerate(["vx", "vy", "vz"]):
-                ds[coord].loc[times.datetime64, "planet", i, "barycentric"] = (
+                ds[coord].loc[times.datetime64, "planet", i, "bary", "kepler"] = (
                     v[j].to(u.m / u.s).value
                 )
         return ds
 
-    def prop_nbody(self, times):
+    def prop_nbody(self, times, ds):
         """
         Calculate the barycentric position and velocity vectors of all bodies
         in the system at the given times using rebound.
         """
         # Set up rebound simulation
         sim = rebound.Simulation()
-        sim.G = const.G.value
-        times_jd = times.utc.jd
+        sim.G = const.G.decompose().value
+        times_sec = (times - times[0]).sec
         times64 = times.datetime64
-        sim.t = times_jd[0]
 
         # Add the star and planets to the simulation, currently assuming no
         # binary systems
         sim = self.add_objects_to_rebound(sim)
         sim.move_to_com()
 
-        # Set up the data array to store the results
-        ds = self.create_dataset(times)
-
         n_stars = 1
-        for time_jd, time in tqdm(
-            zip(times_jd, times64), total=len(times), desc="n-body system propagation"
+        for time_sec, time64 in tqdm(
+            zip(times_sec, times64), total=len(times), desc="n-body system propagation"
         ):
-            sim.integrate(time_jd)
+            sim.integrate(time_sec)
             for j, p in enumerate(sim.particles):
                 object = "star" if j < n_stars else "planet"
                 index = j if j < n_stars else j - n_stars
 
                 for coord, value in zip(["x", "y", "z"], [p.x, p.y, p.z]):
-                    ds[coord].loc[time, object, index, "barycentric"] = value
+                    ds[coord].loc[
+                        time64, object, index, self.nbody_frame, "nbody"
+                    ] = value
                 for coord, value in zip(["vx", "vy", "vz"], [p.vx, p.vy, p.vz]):
-                    ds[coord].loc[time, object, index, "barycentric"] = value
+                    ds[coord].loc[
+                        time64, object, index, self.nbody_frame, "nbody"
+                    ] = value
+        return ds
+
+    def add_heliocentric_motion(self, ds, prop_method="kepler"):
+        """
+        Subtract the star's motion from the system's motion to get the
+        heliocentric motion of the planets
+        """
+        bary_frame = "bary"
+        helio_frame = "helio"
+        star_bary_r = (
+            ds[["x", "y", "z"]]
+            .sel(object="star", index=0, frame=bary_frame, prop=prop_method)
+            .to_array()
+            .data
+        )
+        star_bary_v = (
+            ds[["vx", "vy", "vz"]]
+            .sel(object="star", index=0, frame=bary_frame, prop=prop_method)
+            .to_array()
+            .data
+        )
+
+        assert np.all(~np.isnan(star_bary_r)), (
+            "Star position vector has NaN. Cannot compute heliocentric frame."
+            " Probably needs N-body propagation."
+        )
+
+        for object in ["star", "planet"]:
+            for i in range(len(ds.index)):
+                # Rotate the position vectors
+                object_bary_r = (
+                    ds[["x", "y", "z"]]
+                    .sel(object=object, index=i, frame=bary_frame, prop=prop_method)
+                    .to_array()
+                    .data
+                )
+                object_helio_r = object_bary_r - star_bary_r
+                ds["x"].loc[:, object, i, helio_frame, prop_method] = object_helio_r[0]
+                ds["y"].loc[:, object, i, helio_frame, prop_method] = object_helio_r[1]
+                ds["z"].loc[:, object, i, helio_frame, prop_method] = object_helio_r[2]
+
+                # Rotate the velocity vectors
+                object_bary_v = (
+                    ds[["vx", "vy", "vz"]]
+                    .sel(object=object, index=i, frame=bary_frame, prop=prop_method)
+                    .to_array()
+                    .data
+                )
+                object_helio_v = object_bary_v - star_bary_v
+                ds["vx"].loc[:, object, i, helio_frame, prop_method] = object_helio_v[0]
+                ds["vy"].loc[:, object, i, helio_frame, prop_method] = object_helio_v[1]
+                ds["vz"].loc[:, object, i, helio_frame, prop_method] = object_helio_v[2]
         return ds
 
     def propagate(
         self,
         times,
-        method="kepler",
-        frame="barycentric",
+        ds=None,
+        prop_method="kepler",
+        frame="bary",
         convention="exovista",
     ):
         """
         Wrapper to handle the various propagation methods
         """
-        # Get the barycentric
-        if method == "kepler":
-            ds = self.prop_kepler(times)
-        elif method == "nbody":
-            ds = self.prop_nbody(times)
+        if ds is None:
+            ds = self.create_dataset(times)
+        # Get the barycentric motion
+        if prop_method == "kepler":
+            ds = self.prop_kepler(times, ds)
+        elif prop_method == "nbody":
+            ds = self.prop_nbody(times, ds)
 
-        if frame == "sky":
-            ds = self.rotate_to_sky_coords(ds, convention=convention)
+        # Convert to the desired frame
+        ds = self.convert_to_frame(
+            ds, frame=frame, convention=convention, prop_method=prop_method
+        )
+
+        return ds
+
+    def convert_to_frame(
+        self, ds, frame="bary", convention="exovista", prop_method="kepler"
+    ):
+        if prop_method == "nbody" and self.nbody_frame == "bary-sky":
+            # Add the base frame, local ecliptic barycentric
+            ds = self.rotate_to_local_ecliptic_coords(
+                ds, frame="bary", prop_method=prop_method
+            )
+
+        if frame in ["helio", "helio-sky"]:
+            # Add the heliocentric motion
+            ds = self.add_heliocentric_motion(ds, prop_method=prop_method)
+
+        if frame in ["bary-sky", "helio-sky"]:
+            ds = self.rotate_to_sky_coords(
+                ds, frame=frame, convention=convention, prop_method=prop_method
+            )
 
         return ds
 
@@ -361,45 +440,98 @@ class System:
             )
         return sim
 
-    def rotate_to_sky_coords(self, ds, convention="exovista"):
+    def rotate_to_sky_coords(
+        self, ds, frame="bary-sky", convention="exovista", prop_method="kepler"
+    ):
         """
         Rotate the state vectors to the sky coordinates from barycentric
         coordinates
         """
-        _ds = copy.deepcopy(ds)
+        if frame == "bary-sky":
+            base_frame = "bary"
+        elif frame == "helio-sky":
+            base_frame = "helio"
         for object in ["star", "planet"]:
             for i in range(len(ds.index)):
                 # Rotate the position vectors
-                bary_r = (
+                base_r = (
                     ds[["x", "y", "z"]]
-                    .sel(object=object, index=i, frame="barycentric")
+                    .sel(object=object, index=i, frame=base_frame, prop=prop_method)
                     .to_array()
                     .data.T
                 )
                 sky_r = misc.gen_rotate_to_sky_coords(
-                    bary_r,
+                    base_r,
                     self.midplane_I,
                     self.midplane_PA,
                     convention=convention,
-                )
-                ds["x"].loc[:, object, i, "sky"] = sky_r[:, 0]
-                ds["y"].loc[:, object, i, "sky"] = sky_r[:, 1]
-                ds["z"].loc[:, object, i, "sky"] = sky_r[:, 2]
+                ).T
+                ds["x"].loc[:, object, i, frame, prop_method] = sky_r[0]
+                ds["y"].loc[:, object, i, frame, prop_method] = sky_r[1]
+                ds["z"].loc[:, object, i, frame, prop_method] = sky_r[2]
 
                 # Rotate the velocity vectors
-                bary_v = (
+                base_v = (
                     ds[["vx", "vy", "vz"]]
-                    .sel(object=object, index=i, frame="barycentric")
+                    .sel(object=object, index=i, frame=base_frame, prop=prop_method)
                     .to_array()
                     .data.T
                 )
                 sky_v = misc.gen_rotate_to_sky_coords(
-                    bary_v,
+                    base_v,
                     self.midplane_I,
                     self.midplane_PA,
                     convention=convention,
+                ).T
+                ds["vx"].loc[:, object, i, frame, prop_method] = sky_v[0]
+                ds["vy"].loc[:, object, i, frame, prop_method] = sky_v[1]
+                ds["vz"].loc[:, object, i, frame, prop_method] = sky_v[2]
+        return ds
+
+    def rotate_to_local_ecliptic_coords(
+        self, ds, frame="bary", convention="exovista", prop_method="kepler"
+    ):
+        """
+        Rotate the state vectors to the sky coordinates from barycentric
+        coordinates
+        """
+        if frame == "bary":
+            base_frame = "bary-sky"
+        elif frame == "helio":
+            base_frame = "helio-sky"
+        for object in ["star", "planet"]:
+            for i in range(len(ds.index)):
+                # Rotate the position vectors
+                base_r = (
+                    ds[["x", "y", "z"]]
+                    .sel(object=object, index=i, frame=base_frame, prop=prop_method)
+                    .to_array()
+                    .data.T
                 )
-                ds["vx"].loc[:, object, i, "sky"] = sky_v[:, 0]
-                ds["vy"].loc[:, object, i, "sky"] = sky_v[:, 1]
-                ds["vz"].loc[:, object, i, "sky"] = sky_v[:, 2]
+                sky_r = misc.gen_rotate_to_local_ecliptic_coords(
+                    base_r,
+                    self.midplane_I,
+                    self.midplane_PA,
+                    convention=convention,
+                ).T
+                ds["x"].loc[:, object, i, frame, prop_method] = sky_r[0]
+                ds["y"].loc[:, object, i, frame, prop_method] = sky_r[1]
+                ds["z"].loc[:, object, i, frame, prop_method] = sky_r[2]
+
+                # Rotate the velocity vectors
+                base_v = (
+                    ds[["vx", "vy", "vz"]]
+                    .sel(object=object, index=i, frame=base_frame, prop=prop_method)
+                    .to_array()
+                    .data.T
+                )
+                sky_v = misc.gen_rotate_to_local_ecliptic_coords(
+                    base_v,
+                    self.midplane_I,
+                    self.midplane_PA,
+                    convention=convention,
+                ).T
+                ds["vx"].loc[:, object, i, frame, prop_method] = sky_v[0]
+                ds["vy"].loc[:, object, i, frame, prop_method] = sky_v[1]
+                ds["vz"].loc[:, object, i, frame, prop_method] = sky_v[2]
         return ds
