@@ -1,3 +1,5 @@
+import copy
+
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
@@ -7,6 +9,8 @@ import xarray as xr
 from astropy.time import Time
 from keplertools import fun as kt
 from tqdm import tqdm
+
+import exoverses.util.misc as misc
 
 
 class System:
@@ -19,8 +23,9 @@ class System:
         self.planets = planets
         self.disk = disk
         if self.planets is not None:
-            self.pInds = np.arange(len(self.planets))
-            self.cleanup()
+            self.planet_cleanup()
+        if self.star is not None:
+            self.star_cleanup()
 
     def __repr__(self):
         return (
@@ -29,11 +34,23 @@ class System:
             f"Planets:\n{self.get_p_df()}"
         )
 
-    def cleanup(self):
+    def planet_cleanup(self):
+        self.pInds = np.arange(len(self.planets))
         # Sort the planets in the system by semi-major axis
         a_vals = [planet.a.value for planet in self.planets]
         self.planets = np.array(self.planets)[np.argsort(a_vals)].tolist()
         self.pInds = self.pInds[np.argsort(a_vals)]
+
+    def star_cleanup(self):
+        if hasattr(self.star, "midplane_I"):
+            self.midplane_I = self.star.midplane_I
+        else:
+            self.midplane_I = 0 * u.rad
+
+        if hasattr(self.star, "midplane_PA"):
+            self.midplane_PA = self.star.midplane_PA
+        else:
+            self.midplane_PA = 0 * u.rad
 
     def getpattr(self, attr):
         # Return array of all planet's attribute value, e.g. all semi-major
@@ -121,58 +138,203 @@ class System:
         # self.rv_df = rv_df
         return df
 
-    def nbody_vectors(self, times, return_r=True, return_v=False):
+    def create_dataset(self, times):
         """
-        Calculate the barycentric position and velocity vectors of all bodies in the system
-        at the given times using rebound.
+        Create an xarray Dataset for the system's barycentric motion
+        """
+        timesd64 = times.datetime64
+        n_stars = 1
+        n_planets = len(self.planets)
+        state_vars = ["x", "y", "z", "vx", "vy", "vz"]
+        coords = {
+            "time": timesd64,
+            "object": ["star", "planet", "disk", "fit"],
+            "index": np.arange(max(n_stars, n_planets)),
+            "frame": ["barycentric", "sky"],
+        }
+
+        data_vars = {
+            var: (
+                ["time", "object", "index", "frame"],
+                np.nan * np.ones((len(timesd64), 4, max(n_stars, n_planets), 2)),
+            )
+            for var in state_vars
+        }
+
+        ds = xr.Dataset(data_vars, coords=coords)
+
+        # Add units information
+        for var in state_vars:
+            ds[var].attrs["unit"] = u.m if var in ["x", "y", "z"] else u.m / u.s
+        return ds
+
+    def prop_kepler(self, times):
+        """
+        Calculate the barycentric position and velocity vectors of the planets
+        in the system at the given times.
+        """
+        ds = self.create_dataset(times)
+        for i, planet in enumerate(self.planets):
+            # Calculate the position and velocity vectors
+            r, v = planet.calc_vectors(times, return_v=True)
+            for j, coord in enumerate(["x", "y", "z"]):
+                ds[coord].loc[times.datetime64, "planet", i, "barycentric"] = (
+                    r[j].to(u.m).value
+                )
+            for j, coord in enumerate(["vx", "vy", "vz"]):
+                ds[coord].loc[times.datetime64, "planet", i, "barycentric"] = (
+                    v[j].to(u.m / u.s).value
+                )
+        return ds
+
+    def prop_nbody(self, times):
+        """
+        Calculate the barycentric position and velocity vectors of all bodies
+        in the system at the given times using rebound.
         """
         # Set up rebound simulation
         sim = rebound.Simulation()
         sim.G = const.G.value
         times_jd = times.utc.jd
+        times64 = times.datetime64
         sim.t = times_jd[0]
-        times = times.datetime64
 
-        # Add the star and planets to the simulation, currently assuming no binary systems
-        n_stars = 1
-        n_planets = len(self.planets)
+        # Add the star and planets to the simulation, currently assuming no
+        # binary systems
         sim = self.add_objects_to_rebound(sim)
         sim.move_to_com()
 
-        data_vars = ["x", "y", "z", "vx", "vy", "vz"]
-        coords = {
-            "time": times,
-            "body_type": ["star", "planet"],
-            "body_index": np.arange(max(n_stars, n_planets)),
-            "variable": data_vars,
-        }
-        da = xr.DataArray(
-            np.nan, coords=coords, dims=["time", "body_type", "body_index", "variable"]
-        )
-        da.attrs["units"] = {
-            "x": u.m,
-            "y": u.m,
-            "z": u.m,
-            "vx": u.m / u.s,
-            "vy": u.m / u.s,
-            "vz": u.m / u.s,
-        }
+        # Set up the data array to store the results
+        ds = self.create_dataset(times)
 
+        n_stars = 1
         for time_jd, time in tqdm(
-            zip(times_jd, times), total=len(times), desc="n-body system propagation"
+            zip(times_jd, times64), total=len(times), desc="n-body system propagation"
         ):
             sim.integrate(time_jd)
             for j, p in enumerate(sim.particles):
-                body_type = "star" if j < n_stars else "planet"
-                body_index = j if j < n_stars else j - n_stars
+                object = "star" if j < n_stars else "planet"
+                index = j if j < n_stars else j - n_stars
 
-                da.loc[time, body_type, body_index, "x"] = p.x
-                da.loc[time, body_type, body_index, "y"] = p.y
-                da.loc[time, body_type, body_index, "z"] = p.z
-                da.loc[time, body_type, body_index, "vx"] = p.vx
-                da.loc[time, body_type, body_index, "vy"] = p.vy
-                da.loc[time, body_type, body_index, "vz"] = p.vz
-        return da
+                for coord, value in zip(["x", "y", "z"], [p.x, p.y, p.z]):
+                    ds[coord].loc[time, object, index, "barycentric"] = value
+                for coord, value in zip(["vx", "vy", "vz"], [p.vx, p.vy, p.vz]):
+                    ds[coord].loc[time, object, index, "barycentric"] = value
+        return ds
+
+    def propagate(
+        self,
+        times,
+        method="kepler",
+        frame="barycentric",
+        convention="exovista",
+    ):
+        """
+        Wrapper to handle the various propagation methods
+        """
+        # Get the barycentric
+        if method == "kepler":
+            ds = self.prop_kepler(times)
+        elif method == "nbody":
+            ds = self.prop_nbody(times)
+
+        if frame == "sky":
+            ds = self.rotate_to_sky_coords(ds, convention=convention)
+
+        return ds
+
+    # def create_dataarray(self, times):
+    #     """
+    #     Create an xarray DataArray for the system's barycentric motion
+    #     """
+    #     timesd64 = times.datetime64
+    #     n_stars = 1
+    #     n_planets = len(self.planets)
+    #     state_vars = ["x", "y", "z", "vx", "vy", "vz"]
+    #     coords = {
+    #         "time": timesd64,
+    #         "object": ["star", "planet"],
+    #         "index": np.arange(max(n_stars, n_planets)),
+    #         "state_var": state_vars,
+    #     }
+    #     da = xr.DataArray(
+    #         np.nan, coords=coords, dims=["time", "object", "index", "state_var"]
+    #     )
+
+    #     # Add units and coordinate system information
+    #     da.attrs["units"] = {
+    #         "x": u.m,
+    #         "y": u.m,
+    #         "z": u.m,
+    #         "vx": u.m / u.s,
+    #         "vy": u.m / u.s,
+    #         "vz": u.m / u.s,
+    #     }
+    #     da.attrs["coordinate system"] = "barycentric"
+    #     return da
+    # def prop_kepler(self, times):
+    #     """
+    #     Calculate the barycentric position and velocity vectors of the planets
+    #     in the system at the given times using keplertools and the calc_vectors
+    #     function of the planet class.
+    #     NOTE: Only the planets!
+    #     Args:
+    #         times (astropy.Time):
+    #             The times to propagate at
+
+    #     Returns:
+    #         da (xarray.DataArray):
+    #             Labeled DataArray holding all the planet position and velocity
+    #             information
+    #     """
+    #     da = self.create_dataarray(times)
+    #     for i, planet in enumerate(self.planets):
+    #         # Calculate the position and velocity vectors
+    #         r, v = planet.calc_vectors(times, return_v=True)
+    #         da.loc[times.datetime64, "planet", i, "x"] = r[0].to(u.m).value
+    #         da.loc[times.datetime64, "planet", i, "y"] = r[1].to(u.m).value
+    #         da.loc[times.datetime64, "planet", i, "z"] = r[2].to(u.m).value
+    #         da.loc[times.datetime64, "planet", i, "vx"] = v[0].to(u.m / u.s).value
+    #         da.loc[times.datetime64, "planet", i, "vy"] = v[1].to(u.m / u.s).value
+    #         da.loc[times.datetime64, "planet", i, "vz"] = v[2].to(u.m / u.s).value
+    #     return da
+
+    # def prop_nbody(self, times):
+    #     """
+    #     Calculate the barycentric position and velocity vectors of all bodies
+    #     in the system at the given times using rebound.
+    #     """
+    #     # Set up rebound simulation
+    #     sim = rebound.Simulation()
+    #     sim.G = const.G.value
+    #     times_jd = times.utc.jd
+    #     times64 = times.datetime64
+    #     sim.t = times_jd[0]
+
+    #     # Add the star and planets to the simulation, currently assuming no
+    #     # binary systems
+    #     sim = self.add_objects_to_rebound(sim)
+    #     sim.move_to_com()
+
+    #     # Set up the data array to store the results
+    #     da = self.create_dataarray(times)
+
+    #     n_stars = 1
+    #     for time_jd, time in tqdm(
+    #         zip(times_jd, times64), total=len(times), desc="n-body system propagation"
+    #     ):
+    #         sim.integrate(time_jd)
+    #         for j, p in enumerate(sim.particles):
+    #             object = "star" if j < n_stars else "planet"
+    #             index = j if j < n_stars else j - n_stars
+
+    #             da.loc[time, object, index, "x"] = p.x
+    #             da.loc[time, object, index, "y"] = p.y
+    #             da.loc[time, object, index, "z"] = p.z
+    #             da.loc[time, object, index, "vx"] = p.vx
+    #             da.loc[time, object, index, "vy"] = p.vy
+    #             da.loc[time, object, index, "vz"] = p.vz
+    #     return da
 
     def add_objects_to_rebound(self, sim):
         """
@@ -198,3 +360,46 @@ class System:
                 vz=planet._vz[0].decompose().value,
             )
         return sim
+
+    def rotate_to_sky_coords(self, ds, convention="exovista"):
+        """
+        Rotate the state vectors to the sky coordinates from barycentric
+        coordinates
+        """
+        _ds = copy.deepcopy(ds)
+        for object in ["star", "planet"]:
+            for i in range(len(ds.index)):
+                # Rotate the position vectors
+                bary_r = (
+                    ds[["x", "y", "z"]]
+                    .sel(object=object, index=i, frame="barycentric")
+                    .to_array()
+                    .data.T
+                )
+                sky_r = misc.gen_rotate_to_sky_coords(
+                    bary_r,
+                    self.midplane_I,
+                    self.midplane_PA,
+                    convention=convention,
+                )
+                ds["x"].loc[:, object, i, "sky"] = sky_r[:, 0]
+                ds["y"].loc[:, object, i, "sky"] = sky_r[:, 1]
+                ds["z"].loc[:, object, i, "sky"] = sky_r[:, 2]
+
+                # Rotate the velocity vectors
+                bary_v = (
+                    ds[["vx", "vy", "vz"]]
+                    .sel(object=object, index=i, frame="barycentric")
+                    .to_array()
+                    .data.T
+                )
+                sky_v = misc.gen_rotate_to_sky_coords(
+                    bary_v,
+                    self.midplane_I,
+                    self.midplane_PA,
+                    convention=convention,
+                )
+                ds["vx"].loc[:, object, i, "sky"] = sky_v[:, 0]
+                ds["vy"].loc[:, object, i, "sky"] = sky_v[:, 1]
+                ds["vz"].loc[:, object, i, "sky"] = sky_v[:, 2]
+        return ds

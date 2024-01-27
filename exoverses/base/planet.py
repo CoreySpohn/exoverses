@@ -53,18 +53,34 @@ class Planet:
         }
         return params
 
-    def calc_vectors(self, t, return_r=True, return_v=False):
+    def calc_vectors(
+        self,
+        t,
+        return_r=True,
+        return_v=False,
+        coord_system="barycentric",
+        convention="exovista",
+    ):
         """
         Given a time, calculate the planet's barycentric position and/or
         velocity vectors
         Args:
             t (Time):
                 Time to calculate the position vectors at
+            return_r (bool):
+                Whether to return the position vectors
+            return_v (bool):
+                Whether to return the velocity vectors
+            coord_system (str):
+                Coordinate system to return vectors in, either "barycentric" or
+                "sky"
+            convention (str):
+                Orbital convention for rotations
         Returns:
-            r(ndarray):
-                3 x n stacked position vector
-            v(ndarray):
-                3 x n stacked velocity vector
+            r(astropy Quantity array):
+                3 x n stacked position vector in meters
+            v(astroypy Quantity array):
+                3 x n stacked velocity vector in m/s
 
         """
         # This will find the radial and velocity vectors at an epoch
@@ -119,7 +135,11 @@ class Planet:
                 r = np.matmul(A, np.diag(np.cos(E) - e)) + np.matmul(
                     B, np.diag(np.sin(E))
                 )
-            r = self.rotate_to_sky_coords(r).T * u.m
+            if coord_system == "sky":
+                r = misc.rotate_to_sky_coords(
+                    r, self.star.midplane_I, self.star.midplane_PA, convention
+                ).T
+            r *= u.m
 
         # Calculate velocity vectors
         if return_v:
@@ -128,15 +148,25 @@ class Planet:
                     np.matmul(-A, np.array(np.sin(E), ndmin=2))
                     + np.matmul(B, np.array(np.cos(E), ndmin=2))
                 ) * np.tile(
-                    np.sqrt(self.mu * a ** (-3.0)) / (1 - e * np.cos(E)), (3, 1)
+                    np.sqrt(self.mu.decompose().value * a ** (-3.0))
+                    / (1 - e * np.cos(E)),
+                    (3, 1),
                 )
             else:
                 v = np.matmul(
                     np.matmul(-A, np.diag(np.sin(E)))
                     + np.matmul(B, np.diag(np.cos(E))),
-                    np.diag(np.sqrt(self.mu * a ** (-3.0)) / (1 - e * np.cos(E))),
+                    np.diag(
+                        np.sqrt(self.mu.decompose().value * a ** (-3.0))
+                        / (1 - e * np.cos(E))
+                    ),
                 )
-            v = self.rotate_to_sky_coords(v).T * u.m / u.s
+            if coord_system == "sky":
+                v = misc.rotate_to_sky_coords(
+                    v, self.star.midplane_I, self.star.midplane_PA, convention
+                ).T
+
+            v *= u.m / u.s
 
         if return_r and return_v:
             return r, v

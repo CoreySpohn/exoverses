@@ -47,33 +47,8 @@ class ExovistaSystem(System):
         # mas/pixel
         self.pixel_scale = self.star.pixel_scale
 
-        # self.ndisk_times = len(self.disk.ev_t)
-
-        # self.cleanup()
-
-        # Set up rebound simulation
-        # self.sim = rebound.Simulation()
-        # self.sim.G = const.G.value
-        # self.sim.add(
-        #     m=self.star.mass.decompose().value,
-        #     x=self.star._x[0].decompose().value,
-        #     y=self.star._y[0].decompose().value,
-        #     z=self.star._z[0].decompose().value,
-        #     vx=self.star._vx[0].decompose().value,
-        #     vy=self.star._vy[0].decompose().value,
-        #     vz=self.star._vz[0].decompose().value,
-        # )
-        # for planet in self.planets:
-        #     self.sim.add(
-        #         m=planet.mass.decompose().value,
-        #         x=planet._x[0].decompose().value,
-        #         y=planet._y[0].decompose().value,
-        #         z=planet._z[0].decompose().value,
-        #         vx=planet._vx[0].decompose().value,
-        #         vy=planet._vy[0].decompose().value,
-        #         vz=planet._vz[0].decompose().value,
-        #     )
-        # self.sim.move_to_com()
+        self.planet_cleanup()
+        self.star_cleanup()
 
     def spec_flux_densities(self, wavelengths, times):
         """

@@ -170,3 +170,114 @@ def rotate_vectors(vectors, axis, angle):
     """
     rot = R.from_rotvec(np.array(axis) * angle.to(u.rad).value)
     return rot.apply(vectors)
+
+
+def gen_rotate_to_sky_coords(
+    vector, inclination, position_angle, convention="exovista"
+):
+    """
+    Rotate from barycentric coordinates to plane of the sky, this is set up
+    to match the exovista data
+
+    Args:
+        vec (np.array):
+            Nx3 array of [x,y,z] vectors in barycentric coordinates
+        inclination (astropy Quantity):
+            Inclination of the system
+        position_angle (astropy Quantity):
+            Position angle of the system
+        convention (str):
+            Convention that describes the transormation to be applied
+
+    Returns:
+        vec (np.array):
+            Nx3 array of vectors rotated to sky coordinates
+    """
+    if convention == "exovista":
+        # Rotate around x axis with midplane inclination
+        vector = rotate_vectors(vector, [1, 0, 0], -inclination)
+        # Rotate around z axis with midplane position angle
+        vector = rotate_vectors(vector, [0, 0, 1], position_angle)
+        # Flip around z axis
+        vector[:, 2] = -vector[:, 2]
+    else:
+        raise Exception(
+            "Convention must be either 'exovista' or 'radvel', got {}".format(
+                convention
+            )
+        )
+    return vector
+
+
+# def add_units(ds, new_unit, vars=["x", "y", "z"], new_unit_params=None):
+#     """
+#     Add units to a dataset by adding a new data variable with the
+#     desired unit conversion
+
+#     new_unit_params format:
+#         length: None needed
+#         angular: {"distance": 10*u.pc}
+#         pixel: {"distance": 10*u.pc, "pixel_scale": 0.1*u.arcsec/u.pixel}
+
+#     """
+#     for var in vars:
+#         if new_unit.physical_type == "length":
+#             var_data = ds[var]
+#             breakpoint()
+
+#     # for var in ["vars"]:
+#     #     var_name = f"{var} ({unit})"
+#     #     if unit.physical_type == "length":
+#     #         pass
+
+
+def add_units(ds, new_unit, vars=["x", "y", "z"], distance=None, pixel_scale=None):
+    """
+    Add units to a dataset by adding a new data variable with the
+    desired unit conversion.
+
+    Args:
+        ds (xarray.Dataset):
+            The original dataset.
+        new_unit (astropy.units.Unit):
+            The target unit for conversion.
+        vars (list of str):
+            List of variable names to convert.
+        distance (astropy.units.Quantity):
+            Distance to system.
+        pixel_scale (astropy.units.Quantity):
+            Pixel scale of the data in angle/pixel units
+    """
+    for var in vars:
+        # Ensure the variable is in the dataset
+        assert var in ds, f"Variable {var} not found in dataset."
+        var_data = ds[var].copy()
+        base_unit = var_data.unit
+        base_data = var_data.data * base_unit
+        # Handle different unit conversions
+        if new_unit.physical_type == "length":
+            converted_data = base_data.to(new_unit)
+        elif new_unit.physical_type == "angle":
+            assert (
+                distance is not None
+            ), "Distance to system not provided for angular conversion."
+            converted_data = (
+                np.arctan(base_data.to(u.m).value / distance.to(u.m).value) * u.rad
+            ).to(new_unit)
+        elif new_unit == "pixel":
+            assert (distance is not None) and (
+                pixel_scale is not None
+            ), "Distance to system and pixel scale must be provided."
+            angular_data = (
+                np.arctan(base_data.to(u.m).value / distance.to(u.m).value) * u.rad
+            )
+            converted_data = (angular_data / pixel_scale).to(new_unit)
+
+        # Update the dataset with the converted data
+        new_name = f"{var}({new_unit})"
+        var_data.data = converted_data.value
+        var_data.attrs["unit"] = new_unit
+
+        ds[new_name] = var_data
+
+    return ds
