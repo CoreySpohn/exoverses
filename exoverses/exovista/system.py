@@ -50,6 +50,7 @@ class ExovistaSystem(System):
 
         # What the nbody simulation frame is
         self.nbody_frame = "bary-sky"
+        self.origin = "ExoVista"
 
         self.planet_cleanup()
         self.star_cleanup()

@@ -107,33 +107,33 @@ class ExovistaPlanet(base.planet.Planet):
             self.planet_spec_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
         )
 
-    def rotate_to_sky_coords(self, vec, roll_angle=0 * u.rad):
-        """
-        Rotate from barycentric coordinates to plane of the sky, this is set up
-        to match the exovista data
+    # def rotate_to_sky_coords(self, vec, roll_angle=0 * u.rad):
+    #     """
+    #     Rotate from barycentric coordinates to plane of the sky, this is set up
+    #     to match the exovista data
 
-        Args:
-            vec (np.array):
-                Nx3 array of vectors in system-plane coordinates
-            roll_angle (astropy Quantity):
-                Angle to rotate the vectors by in the plane of the sky to simulate
-                roll of the telescope
+    #     Args:
+    #         vec (np.array):
+    #             Nx3 array of vectors in system-plane coordinates
+    #         roll_angle (astropy Quantity):
+    #             Angle to rotate the vectors by in the plane of the sky to simulate
+    #             roll of the telescope
 
-        Returns:
-            vec (np.array):
-                Nx3 array of vectors rotated to sky coordinates
+    #     Returns:
+    #         vec (np.array):
+    #             Nx3 array of vectors rotated to sky coordinates
 
-        """
-        # Rotate around x axis with midplane inclination
-        vec = misc.rotate_vectors(vec.T, [1, 0, 0], -self.star.midplane_I)
+    #     """
+    #     # Rotate around x axis with midplane inclination
+    #     vec = misc.rotate_vectors(vec.T, [1, 0, 0], -self.star.midplane_I)
 
-        # Rotate around z axis with midplane position angle
-        vec = misc.rotate_vectors(vec, [0, 0, 1], self.star.midplane_PA)
+    #     # Rotate around z axis with midplane position angle
+    #     vec = misc.rotate_vectors(vec, [0, 0, 1], self.star.midplane_PA)
 
-        # Flip around z axis
-        vec[:, 2] = -vec[:, 2]
+    #     # Flip around z axis
+    #     vec[:, 2] = -vec[:, 2]
 
-        if roll_angle != 0 * u.rad:
-            # Rotate around y axis with roll angle
-            vec = misc.rotate_vectors(vec, [0, 0, 1], roll_angle)
-        return vec
+    #     if roll_angle != 0 * u.rad:
+    #         # Rotate around y axis with roll angle
+    #         vec = misc.rotate_vectors(vec, [0, 0, 1], roll_angle)
+    #     return vec

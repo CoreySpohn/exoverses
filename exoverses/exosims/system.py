@@ -21,6 +21,7 @@ class ExosimsSystem(System):
             self.planets.append(ExosimsPlanet(SU, self.star, pInd, t0))
 
         self.cleanup()
+        self.origin = "EXOSIMS"
         # Set up rebound simulation
         # self.sim = rebound.Simulation()
         # self.sim.G = const.G.value

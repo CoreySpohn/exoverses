@@ -1,6 +1,10 @@
+from itertools import combinations
+from pathlib import PurePath
+
 import astropy.units as u
 import numpy as np
 from astropy import constants as c
+from astropy.time import Time
 from scipy.optimize import root
 from scipy.spatial.transform import Rotation as R
 
@@ -267,7 +271,14 @@ def gen_rotate_to_local_ecliptic_coords(
 #     #         pass
 
 
-def add_units(ds, new_unit, vars=["x", "y", "z"], distance=None, pixel_scale=None):
+def add_units(
+    ds,
+    new_unit,
+    vars=["x", "y", "z"],
+    distance=None,
+    pixel_scale=None,
+    star_pixel=None,
+):
     """
     Add units to a dataset by adding a new data variable with the
     desired unit conversion.
@@ -283,6 +294,9 @@ def add_units(ds, new_unit, vars=["x", "y", "z"], distance=None, pixel_scale=Non
             Distance to system.
         pixel_scale (astropy.units.Quantity):
             Pixel scale of the data in angle/pixel units
+        star_pixel (astropy.Quantity array):
+            The [x,y] pixel where the star is located under the assumption
+            that the star is at the center of the image
     """
     for var in vars:
         # Ensure the variable is in the dataset
@@ -301,13 +315,15 @@ def add_units(ds, new_unit, vars=["x", "y", "z"], distance=None, pixel_scale=Non
                 np.arctan(base_data.to(u.m).value / distance.to(u.m).value) * u.rad
             ).to(new_unit)
         elif new_unit == "pixel":
-            assert (distance is not None) and (
-                pixel_scale is not None
+            assert (
+                (distance is not None)
+                and (pixel_scale is not None)
+                and (star_pixel is not None)
             ), "Distance to system and pixel scale must be provided."
             angular_data = (
                 np.arctan(base_data.to(u.m).value / distance.to(u.m).value) * u.rad
             )
-            converted_data = (angular_data / pixel_scale).to(new_unit)
+            converted_data = (angular_data / pixel_scale).to(new_unit) + star_pixel
 
         # Update the dataset with the converted data
         new_name = f"{var}({new_unit})"
