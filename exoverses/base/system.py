@@ -288,6 +288,7 @@ class System:
         ref_frame="bary",
         convention="exovista",
         t0=Time(2000, format="decimalyear"),
+        clean=False,
     ):
         """
         Wrapper to handle the various propagation methods
@@ -312,6 +313,10 @@ class System:
         if scalar_time:
             ds = ds.isel(time=1)
 
+        if clean:
+            # Check for coordinate values that have all nan values
+            # and drop them to save memory space
+            ds = misc.drop_nan_coord_values(ds)
         return ds
 
     def convert_to_frame(

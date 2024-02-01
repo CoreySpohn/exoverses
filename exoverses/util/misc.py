@@ -245,30 +245,71 @@ def gen_rotate_to_local_ecliptic_coords(
         vector = rotate_vectors(vector, [1, 0, 0], inclination)
 
     else:
-        raise Exception("No other conventions currently supported :(")
+        raise Exception("No other conventions currently supported")
     return vector
 
 
-# def add_units(ds, new_unit, vars=["x", "y", "z"], new_unit_params=None):
+# def drop_nan_coords(ds):
 #     """
-#     Add units to a dataset by adding a new data variable with the
-#     desired unit conversion
+#     Removes coordinates from an xarray dataset that contain only NaN values.
 
-#     new_unit_params format:
-#         length: None needed
-#         angular: {"distance": 10*u.pc}
-#         pixel: {"distance": 10*u.pc, "pixel_scale": 0.1*u.arcsec/u.pixel}
+#     This function iterates over all coordinates in the provided xarray dataset,
+#     checks if each coordinate contains only NaN values, and removes those coordinates.
+#     The check is performed using the isnull() method combined with the all() aggregation
+#     function. Coordinates that are fully NaN are dropped from the dataset.
 
+#     Args:
+#         dataset (xr.Dataset):
+#             The input xarray dataset from which NaN-only coordinates will be removed.
+
+#     Returns:
+#         xr.Dataset:
+#             A new xarray dataset with NaN-only coordinates removed.
 #     """
-#     for var in vars:
-#         if new_unit.physical_type == "length":
-#             var_data = ds[var]
-#             breakpoint()
+#     coords_to_drop = []
+#     for coord in ds.coords:
+#         coord_vals = ds[coord].values
+#         # Check if all values in the coordinate are NaN
+#         if ds[coord].isnull().all():
+#             coords_to_drop.append(coord)
 
-#     # for var in ["vars"]:
-#     #     var_name = f"{var} ({unit})"
-#     #     if unit.physical_type == "length":
-#     #         pass
+#     # Drop identified coordinates
+#     for coord in coords_to_drop:
+#         ds = ds.drop_vars(coord)
+
+#     return ds
+
+
+def drop_nan_coord_values(ds):
+    """
+    Drops coordinate values and their associated data if the data across all
+    variables for those coordinate values are NaN.
+
+    This function iterates over each coordinate in the dataset, checks each
+    value of the coordinate to determine if all associated data across all
+    variables are NaN, and if so, removes those coordinate values and their
+    associated data.
+
+    Args:
+        ds (xr.Dataset):
+            Input xarray dataset.
+
+    Returns:
+        xr.Dataset:
+            Dataset with NaN-only coordinate values and their data removed.
+    """
+    for coord in list(ds.coords):
+        unique_vals = ds[coord].values
+        for val in unique_vals:
+            # Mask for the current coordinate value across all data variables
+            mask = ds.isel({coord: ds[coord] == val}).notnull()
+
+            # Check if all data for this coordinate value are NaN across all variables
+            if not mask.to_array().any():
+                # Drop the coordinate value across all variables
+                ds = ds.where(ds[coord] != val, drop=True)
+
+    return ds
 
 
 def add_units(
