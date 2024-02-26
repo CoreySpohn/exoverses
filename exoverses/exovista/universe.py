@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 import astropy.io.fits as fits
+import dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -50,11 +51,11 @@ class ExovistaUniverse(Universe):
                 cache_file = Path(cache_base, system_file.stem + ".p")
                 if cache_file.exists():
                     with open(cache_file, "rb") as f:
-                        system = pickle.load(f)
+                        system = dill.load(f)
                 else:
                     system = ExovistaSystem(system_file)
                     with open(cache_file, "wb") as f:
-                        pickle.dump(system, f)
+                        dill.dump(system, f)
                 self.systems.append(system)
             else:
                 system = ExovistaSystem(system_file)

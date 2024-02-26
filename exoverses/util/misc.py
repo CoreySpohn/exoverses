@@ -313,12 +313,7 @@ def drop_nan_coord_values(ds):
 
 
 def add_units(
-    ds,
-    new_unit,
-    vars=["x", "y", "z"],
-    distance=None,
-    pixel_scale=None,
-    star_pixel=None,
+    ds, new_unit, vars=["x", "y", "z"], distance=None, pixel_scale=None, star_pixel=None
 ):
     """
     Add units to a dataset by adding a new data variable with the
