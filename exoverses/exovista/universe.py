@@ -1,3 +1,5 @@
+import multiprocessing
+import os
 import pickle
 import subprocess
 from pathlib import Path
@@ -6,19 +8,24 @@ import astropy.io.fits as fits
 import dill
 import numpy as np
 import pandas as pd
+from ExoVista import (Settings, generate_disks, generate_planets,
+                      generate_scene, load_stars)
 from tqdm import tqdm
 
 from exoverses.base.universe import Universe
 from exoverses.exovista.system import ExovistaSystem
 
 
-def create_universe(universe_params):
+def create_universe(universe_params, workers=10):
     data_path = Path(universe_params["data_path"])
     un = universe_params["universe_number"]
+    targetlist = universe_params["target_list"]
     full_path = f"{data_path}/{un}"
-    if not Path(full_path).exists():
-        get_data([un], data_path)
-    universe = ExovistaUniverse(full_path, cache=True)
+    # if not Path(full_path).exists():
+    #     get_data([un], data_path)
+    generate_systems(targetlist, full_path, workers=workers)
+
+    universe = ExovistaUniverse(full_path, targetlist, cache=True)
     return universe
 
 
@@ -27,7 +34,7 @@ class ExovistaUniverse(Universe):
     Class for the whole exoVista universe
     """
 
-    def __init__(self, path, cache=False):
+    def __init__(self, path, target_list, cache=False):
         """
         Args:
             path (str or Path):
@@ -43,9 +50,16 @@ class ExovistaUniverse(Universe):
         # Load all systems
         p = Path(path).glob("*.fits")
         system_files = [x for x in p if x.is_file]
+        hip_inds = pd.read_csv(target_list, header=None, names=["HIP"])
+        hip_inds["HIP"] = hip_inds["HIP"].str.replace("HIP ", "").astype(int)
+        relevant_files = []
+        for file in system_files:
+            file_hip_ind = int(file.stem.split("-")[1].split("_")[1])
+            if file_hip_ind in hip_inds["HIP"].values:
+                relevant_files.append(file)
         self.systems = []
         for system_file in tqdm(
-            system_files, desc="Loading systems", position=0, leave=False
+            relevant_files, desc="Loading systems", position=0, leave=False
         ):
             if cache:
                 cache_file = Path(cache_base, system_file.stem + ".p")
@@ -66,7 +80,51 @@ class ExovistaUniverse(Universe):
         self.ids = [system.star.id for system in self.systems]
         self.names = [system.star.name for system in self.systems]
 
-        Universe.__init__(self)
+        super().__init__()
+        breakpoint()
+
+
+def generate_systems(targetlist, path, workers=12):
+    settings = Settings.Settings(timemax=10.0, output_dir=path)
+
+    stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)
+    print("\n{0:d} stars in model ranges.".format(len(stars)))
+
+    planets, albedos = generate_planets.generate_planets(
+        stars, settings, force_earth=True
+    )
+    disks, compositions = generate_disks.generate_disks(
+        stars, planets, settings, nexozodis=nexozodis
+    )
+    print("Generating scenes. (This may take a while.)")
+
+    cores = min(workers, os.cpu_count())
+    cores = min(cores, len(stars))
+    percore = int(np.ceil(len(stars) / cores))
+    if percore > 1 and percore * (cores - 1) >= len(stars):
+        percore -= 1
+
+    print(f"Using {cores} cores")
+    pool = multiprocessing.Pool(cores)
+
+    inputs = []
+    for i in range(0, cores):
+        imin = i * percore
+        imax = (i + 1) * percore
+        inputs.append(
+            [
+                stars.iloc[imin:imax],
+                planets[imin:imax],
+                disks[imin:imax],
+                albedos[imin:imax],
+                compositions[imin:imax],
+                settings,
+            ]
+        )
+
+    pool.starmap(generate_scene.generate_scene, [inputs[j][:] for j in range(0, cores)])
+    pool.close()
+    pool.join()
 
 
 def runcmd(cmd, verbose=False):
