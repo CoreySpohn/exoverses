@@ -1,8 +1,6 @@
-import astropy.constants as const
 import astropy.units as u
 import numpy as np
 from astropy.io.fits import getheader
-from astropy.time import Time
 from keplertools import fun as kt
 
 import exoverses.exovista as ev
@@ -94,7 +92,7 @@ class ExovistaSystem(System):
                 rs = np.array([_x, _y, _z])
                 vs = np.array([_vx, _vy, _vz])
                 mu = planet.mu.decompose().value.reshape(1)
-                _a, _e, _E, _O, _I, _w, _P, _tau = kt.vec2orbElem(rs, vs, mu)
+                _, _, _E, _O, _I, _w, _P, _tau = kt.vec2orbElem(rs, vs, mu)
 
                 # Set the angles
                 planet.W = (_O[0] * u.rad).to(u.deg)
