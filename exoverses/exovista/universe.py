@@ -9,7 +9,7 @@ import dill
 import numpy as np
 import pandas as pd
 from ExoVista import (Settings, generate_disks, generate_planets,
-                      generate_scene, load_stars)
+                      generate_scene, load_stars, read_solarsystem)
 from tqdm import tqdm
 
 from exoverses.base.universe import Universe
@@ -20,12 +20,20 @@ def create_universe(universe_params, workers=10):
     data_path = Path(universe_params["data_path"])
     un = universe_params["universe_number"]
     targetlist = universe_params["target_list"]
+    convert = universe_params.get("convert")
+    system_path = universe_params.get("system_path")
     full_path = f"{data_path}/{un}"
-    # if not Path(full_path).exists():
-    #     get_data([un], data_path)
-    generate_systems(targetlist, full_path, workers=workers)
+    if Path(system_path).exists():
+        settings = Settings.Settings(timemax=10.0, ncomponents=2, output_dir=full_path)
+        s, p, a, d, c, new_settings = read_solarsystem.read_solarsystem(
+            settings, system_file=system_path
+        )
+        generate_scene.generate_scene(s, p, d, a, c, new_settings)
+    else:
+        generate_systems(targetlist, full_path, workers=workers)
 
-    universe = ExovistaUniverse(full_path, targetlist, cache=True)
+    universe = ExovistaUniverse(full_path, targetlist, convert=convert, cache=True)
+    breakpoint()
     return universe
 
 
@@ -34,7 +42,7 @@ class ExovistaUniverse(Universe):
     Class for the whole exoVista universe
     """
 
-    def __init__(self, path, target_list, cache=False):
+    def __init__(self, path, target_list, convert=False, cache=False):
         """
         Args:
             path (str or Path):
@@ -50,7 +58,9 @@ class ExovistaUniverse(Universe):
         # Load all systems
         p = Path(path).glob("*.fits")
         system_files = [x for x in p if x.is_file]
-        hip_inds = pd.read_csv(target_list, header=None, names=["HIP"])
+        hip_inds = pd.read_csv(target_list)
+        if "HIP" not in hip_inds.columns:
+            hip_inds = hip_inds.rename(columns={"name": "HIP"})
         hip_inds["HIP"] = hip_inds["HIP"].str.replace("HIP ", "").astype(int)
         relevant_files = []
         for file in system_files:
@@ -67,7 +77,7 @@ class ExovistaUniverse(Universe):
                     with open(cache_file, "rb") as f:
                         system = dill.load(f)
                 else:
-                    system = ExovistaSystem(system_file)
+                    system = ExovistaSystem(system_file, convert=convert)
                     with open(cache_file, "wb") as f:
                         dill.dump(system, f)
                 self.systems.append(system)
@@ -81,7 +91,6 @@ class ExovistaUniverse(Universe):
         self.names = [system.star.name for system in self.systems]
 
         super().__init__()
-        breakpoint()
 
 
 def generate_systems(targetlist, path, workers=12):

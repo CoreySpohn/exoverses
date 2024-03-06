@@ -1,4 +1,6 @@
+import astropy.constants as const
 import astropy.units as u
+import keplertools.fun as kt
 import numpy as np
 import pandas as pd
 from astropy.io.fits import getdata
@@ -68,8 +70,6 @@ class ExovistaPlanet(base.planet.Planet):
         )
 
         # Initial mean anomaly
-        # breakpoint()
-        # self.M0 = self.nu[0]
         self.M0 = self.M[0]
         planet_dict = {
             "t0": self.t0,

@@ -2,6 +2,8 @@ import astropy.constants as const
 import astropy.units as u
 import numpy as np
 from astropy.io.fits import getheader
+from astropy.time import Time
+from keplertools import fun as kt
 
 import exoverses.exovista as ev
 from exoverses.base.system import System
@@ -16,7 +18,7 @@ class ExovistaSystem(System):
             Path to the exoVista fits file
     """
 
-    def __init__(self, infile, initial_epoc=2000):
+    def __init__(self, infile, initial_epoc=2000, convert=False):
         self.file = infile
         self.name = self.file.name
 
@@ -54,6 +56,55 @@ class ExovistaSystem(System):
 
         self.planet_cleanup()
         self.star_cleanup()
+
+        if convert:
+            # Use nbody integration to get the positions in the sky-frame
+            _t0 = self.planets[0]._t[0].reshape(1)
+            bary = self.propagate(_t0, clean=True, ref_frame="bary-sky", prop="nbody")
+
+            # Now we're converting the system object to the "bary" frame from
+            # the "bary-sky" frame without a midplane
+            self.nbody_frame = "bary"
+
+            # Set the star's position and velocity
+            sel = bary.sel(object="star", index=0, ref_frame="bary-sky").squeeze()
+            _x, _y, _z = sel.x.item(), sel.y.item(), sel.z.item()
+            _vx, _vy, _vz = sel.vx.item(), sel.vy.item(), sel.vz.item()
+            self.star._x = u.Quantity(_x * u.m).reshape(1)
+            self.star._y = u.Quantity(_y * u.m).reshape(1)
+            self.star._z = u.Quantity(_z * u.m).reshape(1)
+            self.star._vx = u.Quantity(_vx * u.m / u.s).reshape(1)
+            self.star._vy = u.Quantity(_vy * u.m / u.s).reshape(1)
+            self.star._vz = u.Quantity(_vz * u.m / u.s).reshape(1)
+
+            # Set the planet's positions, velocities, and orbital angles
+            for i, planet in enumerate(self.planets):
+                sel = bary.sel(object="planet", index=i, ref_frame="bary-sky").squeeze()
+                _x, _y, _z = sel.x.item(), sel.y.item(), sel.z.item()
+                _vx, _vy, _vz = sel.vx.item(), sel.vy.item(), sel.vz.item()
+                # Assign the new positions and velocities
+                planet._x = u.Quantity(_x * u.m).reshape(1)
+                planet._y = u.Quantity(_y * u.m).reshape(1)
+                planet._z = u.Quantity(_z * u.m).reshape(1)
+                planet._vx = u.Quantity(_vx * u.m / u.s).reshape(1)
+                planet._vy = u.Quantity(_vy * u.m / u.s).reshape(1)
+                planet._vz = u.Quantity(_vz * u.m / u.s).reshape(1)
+
+                # Calculate the orbital elements
+                rs = np.array([_x, _y, _z])
+                vs = np.array([_vx, _vy, _vz])
+                mu = planet.mu.decompose().value.reshape(1)
+                _a, _e, _E, _O, _I, _w, _P, _tau = kt.vec2orbElem(rs, vs, mu)
+
+                # Set the angles
+                planet.W = (_O[0] * u.rad).to(u.deg)
+                planet.w = (_w[0] * u.rad).to(u.deg)
+                planet.inc = (_I[0] * u.rad).to(u.deg)
+                _E = _E[0] * u.rad
+                planet.M0 = (
+                    (_E.value - planet.e * np.sin(_E)) % (2 * np.pi) * u.rad
+                ).to(u.deg)
+                planet.solve_dependent_params()
 
     def spec_flux_densities(self, wavelengths, times):
         """
