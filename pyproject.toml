@@ -7,7 +7,7 @@ name = "exoverses"
 version = "0.1"
 authors = [{name="Corey Spohn",email = "corey.a.spohn@nasa.gov"}]
 description = "A unified interface for the various tools that create universes for exoplanet simulations"
-dependencies = ["matplotlib", "numpy", "pandas", "astropy", "keplertools", "EXOSIMS", "scipy", "rebound", "xarray", "tqdm"]
+dependencies = ["matplotlib", "numpy", "pandas", "astropy", "keplertools", "EXOSIMS", "scipy", "rebound", "xarray", "tqdm", "dill"]
 license = {file="LICENSE"}
 dynamic = ['readme']
 classifiers = [
