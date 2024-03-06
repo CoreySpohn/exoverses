@@ -1,10 +1,6 @@
-from itertools import combinations
-from pathlib import PurePath
-
 import astropy.units as u
 import numpy as np
 from astropy import constants as c
-from astropy.time import Time
 from scipy.optimize import root
 from scipy.spatial.transform import Rotation as R
 
@@ -123,7 +119,6 @@ def Msini(K, P, Mstar, e, Msini_units="earth"):
 
     # Use correct calculation if any elements are >10% of the stellar mass
     if (np.array(((Msini * u.Mjup).to(u.M_sun) / (Mstar / Msun)).value > 0.10)).any():
-
         a = K * (((2 * (np.pi) * G) / P) ** (-1 / 3.0)) * np.sqrt(1 - (e**2))
         Msini = []
         if isinstance(P, float):

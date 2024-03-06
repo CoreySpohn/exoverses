@@ -11,7 +11,6 @@ class ExosimsStar(Star):
     """
 
     def __init__(self, SU, sInd):
-
         # Get the object's data from the fits file
 
         TL = SU.TargetList

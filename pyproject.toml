@@ -1,19 +1,26 @@
 [build-system]
-requires = ["setuptools", 'wheel']
-build-backend = "setuptools.build_meta"
+requires = ['hatchling', "hatch-fancy-pypi-readme"]
+build-backend = "hatchling.build"
 
 [project]
 name = "exoverses"
 version = "0.1"
 authors = [{name="Corey Spohn",email = "corey.a.spohn@nasa.gov"}]
 description = "A unified interface for the various tools that create universes for exoplanet simulations"
-# readme = {file= "README.md"}
-dependencies = ["matplotlib", "numpy", "pandas", "astropy", "keplertools", "EXOSIMS", "scipy"]
+dependencies = ["matplotlib", "numpy", "pandas", "astropy", "keplertools", "EXOSIMS", "scipy", "rebound", "xarray", "tqdm"]
 license = {file="LICENSE"}
+dynamic = ['readme']
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
 ]
 
-[dynamic]
-readme = {file= "README.md"}
+[project.urls]
+Homepage = "https://github.com/CoreySpohn/exoverses"
+Issues = "https://github.com/CoreySpohn/exoverses/issues"
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"

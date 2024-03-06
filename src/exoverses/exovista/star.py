@@ -1,7 +1,6 @@
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
-import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.io.fits import getdata
 from astropy.time import Time

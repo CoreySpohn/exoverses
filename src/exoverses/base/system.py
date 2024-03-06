@@ -1,5 +1,3 @@
-import copy
-
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
@@ -104,8 +102,8 @@ class System:
         syst_M = []
         for planet in self.planets:
             syst_M.append(planet.mean_anom(times))
-        breakpoint()
-        E = kt.eccanom_orvara(np.stack(syst_M).value, self.getpattr("e"))
+        # breakpoint()
+        # E = kt.eccanom_orvara(np.stack(syst_M).value, self.getpattr("e"))
 
     def propagate_rv(self, times):
         """
@@ -219,13 +217,13 @@ class System:
                 index = j if j < n_stars else j - n_stars
 
                 for coord, value in zip(["x", "y", "z"], [p.x, p.y, p.z]):
-                    ds[coord].loc[
-                        time64, object, index, self.nbody_frame, "nbody"
-                    ] = value
+                    ds[coord].loc[time64, object, index, self.nbody_frame, "nbody"] = (
+                        value
+                    )
                 for coord, value in zip(["vx", "vy", "vz"], [p.vx, p.vy, p.vz]):
-                    ds[coord].loc[
-                        time64, object, index, self.nbody_frame, "nbody"
-                    ] = value
+                    ds[coord].loc[time64, object, index, self.nbody_frame, "nbody"] = (
+                        value
+                    )
         return ds
 
     def add_heliocentric_motion(self, ds, prop="kepler"):

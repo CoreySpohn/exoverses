@@ -1,14 +1,10 @@
-import astropy.constants as const
 import astropy.units as u
-import keplertools.fun as kt
 import numpy as np
-import pandas as pd
 from astropy.io.fits import getdata
 from astropy.time import Time
 from scipy.interpolate import interp1d, interp2d
 
 import exoverses.base as base
-import exoverses.util.misc as misc
 
 
 class ExovistaPlanet(base.planet.Planet):

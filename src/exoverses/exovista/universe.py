@@ -1,6 +1,5 @@
 import multiprocessing
 import os
-import pickle
 import subprocess
 from pathlib import Path
 
@@ -8,8 +7,14 @@ import astropy.io.fits as fits
 import dill
 import numpy as np
 import pandas as pd
-from ExoVista import (Settings, generate_disks, generate_planets,
-                      generate_scene, load_stars, read_solarsystem)
+from ExoVista import (
+    Settings,
+    generate_disks,
+    generate_planets,
+    generate_scene,
+    load_stars,
+    read_solarsystem,
+)
 from tqdm import tqdm
 
 from exoverses.base.universe import Universe

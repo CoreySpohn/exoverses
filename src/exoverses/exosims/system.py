@@ -11,7 +11,6 @@ class ExosimsSystem(System):
     """
 
     def __init__(self, SU, sInd, t0):
-
         # Create star object
         self.star = ExosimsStar(SU, sInd)
         self.planets = []
