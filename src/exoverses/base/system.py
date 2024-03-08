@@ -196,7 +196,8 @@ class System:
         # Set up rebound simulation
         sim = rebound.Simulation()
         sim.G = const.G.decompose().value
-        times_sec = (times - times[0]).sec
+        t0 = self.star._t[0]
+        times_sec = (times - t0).sec
         times64 = times.datetime64
 
         # Add the star and planets to the simulation, currently assuming no
@@ -293,7 +294,7 @@ class System:
         """
         scalar_time = times.isscalar
         if scalar_time:
-            times = Time([t0, times])
+            times = Time([times])
 
         if ds is None:
             ds = self.create_dataset(times)
@@ -309,7 +310,7 @@ class System:
         )
 
         if scalar_time:
-            ds = ds.isel(time=1)
+            ds = ds.isel(time=0)
 
         if clean:
             # Check for coordinate values that have all nan values
@@ -334,99 +335,6 @@ class System:
             )
 
         return ds
-
-    # def create_dataarray(self, times):
-    #     """
-    #     Create an xarray DataArray for the system's barycentric motion
-    #     """
-    #     timesd64 = times.datetime64
-    #     n_stars = 1
-    #     n_planets = len(self.planets)
-    #     state_vars = ["x", "y", "z", "vx", "vy", "vz"]
-    #     coords = {
-    #         "time": timesd64,
-    #         "object": ["star", "planet"],
-    #         "index": np.arange(max(n_stars, n_planets)),
-    #         "state_var": state_vars,
-    #     }
-    #     da = xr.DataArray(
-    #         np.nan, coords=coords, dims=["time", "object", "index", "state_var"]
-    #     )
-
-    #     # Add units and coordinate system information
-    #     da.attrs["units"] = {
-    #         "x": u.m,
-    #         "y": u.m,
-    #         "z": u.m,
-    #         "vx": u.m / u.s,
-    #         "vy": u.m / u.s,
-    #         "vz": u.m / u.s,
-    #     }
-    #     da.attrs["coordinate system"] = "barycentric"
-    #     return da
-    # def prop_kepler(self, times):
-    #     """
-    #     Calculate the barycentric position and velocity vectors of the planets
-    #     in the system at the given times using keplertools and the calc_vectors
-    #     function of the planet class.
-    #     NOTE: Only the planets!
-    #     Args:
-    #         times (astropy.Time):
-    #             The times to propagate at
-
-    #     Returns:
-    #         da (xarray.DataArray):
-    #             Labeled DataArray holding all the planet position and velocity
-    #             information
-    #     """
-    #     da = self.create_dataarray(times)
-    #     for i, planet in enumerate(self.planets):
-    #         # Calculate the position and velocity vectors
-    #         r, v = planet.calc_vectors(times, return_v=True)
-    #         da.loc[times.datetime64, "planet", i, "x"] = r[0].to(u.m).value
-    #         da.loc[times.datetime64, "planet", i, "y"] = r[1].to(u.m).value
-    #         da.loc[times.datetime64, "planet", i, "z"] = r[2].to(u.m).value
-    #         da.loc[times.datetime64, "planet", i, "vx"] = v[0].to(u.m / u.s).value
-    #         da.loc[times.datetime64, "planet", i, "vy"] = v[1].to(u.m / u.s).value
-    #         da.loc[times.datetime64, "planet", i, "vz"] = v[2].to(u.m / u.s).value
-    #     return da
-
-    # def prop_nbody(self, times):
-    #     """
-    #     Calculate the barycentric position and velocity vectors of all bodies
-    #     in the system at the given times using rebound.
-    #     """
-    #     # Set up rebound simulation
-    #     sim = rebound.Simulation()
-    #     sim.G = const.G.value
-    #     times_jd = times.utc.jd
-    #     times64 = times.datetime64
-    #     sim.t = times_jd[0]
-
-    #     # Add the star and planets to the simulation, currently assuming no
-    #     # binary systems
-    #     sim = self.add_objects_to_rebound(sim)
-    #     sim.move_to_com()
-
-    #     # Set up the data array to store the results
-    #     da = self.create_dataarray(times)
-
-    #     n_stars = 1
-    #     for time_jd, time in tqdm(
-    #         zip(times_jd, times64), total=len(times), desc="n-body system propagation"
-    #     ):
-    #         sim.integrate(time_jd)
-    #         for j, p in enumerate(sim.particles):
-    #             object = "star" if j < n_stars else "planet"
-    #             index = j if j < n_stars else j - n_stars
-
-    #             da.loc[time, object, index, "x"] = p.x
-    #             da.loc[time, object, index, "y"] = p.y
-    #             da.loc[time, object, index, "z"] = p.z
-    #             da.loc[time, object, index, "vx"] = p.vx
-    #             da.loc[time, object, index, "vy"] = p.vy
-    #             da.loc[time, object, index, "vz"] = p.vz
-    #     return da
 
     def add_objects_to_rebound(self, sim):
         """
