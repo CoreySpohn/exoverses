@@ -90,24 +90,10 @@ class System:
 
         return p_df
 
-    def propagate_img(self, times):
-        """
-        Propagates system at all times given. Currently does not handle
-        """
-        # Get unique time values, multiple instruments can be scheduled to
-        # observe at the same time
-
-        times = Time(np.unique(times.jd), format="jd")
-        # Calculate planet positions at all times
-        syst_M = []
-        for planet in self.planets:
-            syst_M.append(planet.mean_anom(times))
-        # breakpoint()
-        # E = kt.eccanom_orvara(np.stack(syst_M).value, self.getpattr("e"))
-
     def propagate_rv(self, times):
         """
-        Propagates system at all times given. Currently does not handle
+        Propagates system at all times given and returns the radial velocity
+
         """
         # Get unique time values, multiple instruments can be scheduled to
         # observe at the same time
@@ -131,12 +117,6 @@ class System:
         df["rv"] = df.sum(axis=1)
         df["t"] = times
 
-        # Storing as dataframe too
-
-        # rv_df = pd.DataFrame(
-        #     np.stack((times, rv_vals.value), axis=-1), columns=["t", "rv"]
-        # )
-        # self.rv_df = rv_df
         return df
 
     def create_dataset(self, times):
@@ -286,7 +266,6 @@ class System:
         prop="kepler",
         ref_frame="bary",
         convention="exovista",
-        t0=Time(2000, format="decimalyear"),
         clean=False,
     ):
         """
