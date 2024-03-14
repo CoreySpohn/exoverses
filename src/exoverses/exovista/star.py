@@ -4,7 +4,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.io.fits import getdata
 from astropy.time import Time
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp2d
 
 import exoverses.base as base
 
@@ -25,12 +25,12 @@ class ExovistaStar(base.star.Star):
         self._t = Time(2000 + obj_data[:, 0], format="decimalyear")
 
         # Interpolate the x position of the star
-        self._x_pix = obj_data[:, 1] * u.pixel
-        self._y_pix = obj_data[:, 2] * u.pixel
-        _x_pix_interp = interp1d(self._t.jd, self._x_pix.value, kind="cubic")
-        _y_pix_interp = interp1d(self._t.jd, self._y_pix.value, kind="cubic")
-        self._x_pix_interp = lambda t: _x_pix_interp(t.jd)
-        self._y_pix_interp = lambda t: _y_pix_interp(t.jd)
+        # self._x_pix = obj_data[:, 1] * u.pixel
+        # self._y_pix = obj_data[:, 2] * u.pixel
+        # _x_pix_interp = interp1d(self._t.jd, self._x_pix.value, kind="cubic")
+        # _y_pix_interp = interp1d(self._t.jd, self._y_pix.value, kind="cubic")
+        # self._x_pix_interp = lambda t: _x_pix_interp(t.jd)
+        # self._y_pix_interp = lambda t: _y_pix_interp(t.jd)
 
         # Positions at times the exovista scene was generated at
         self._x = obj_data[:, 9] * u.AU

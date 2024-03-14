@@ -229,73 +229,85 @@ class Planet:
         the EXOSIMS SubtypeCompleteness method classifyPlanets so that EXOSIMS
         isn't a mandatory import
         """
-        # Calculate the luminosity of the star, assuming main-sequence
-        if self.mass < 2 * u.M_sun:
-            self.Ls = const.L_sun * (self.star.mass / const.M_sun) ** 4
-        else:
-            self.Ls = 1.4 * const.L_sun * (self.star.mass / const.M_sun) ** 3.5
+        # Reverse luminosity scaling
+        a = self.a.to("AU").value / np.sqrt(self.star.luminosity.to("Lsun").value)
 
-        Rp = self.radius.to("earthRad").value
-        # a = self.a.to("AU").value
-        # e = self.e
+        lower_a = 0.95
+        upper_a = 1.67
 
-        # Find the stellar flux at the planet's location as a fraction of earth's
-        earth_Lp = const.L_sun / (1 * (1 + (0.0167**2) / 2)) ** 2
-        self.Lp = (
-            self.Ls / (self.a.to("AU").value * (1 + (self.e**2) / 2)) ** 2 / earth_Lp
+        lower_R = 0.8 / np.sqrt(a)
+        upper_R = 1.4
+        self.is_earth = (lower_a <= a < upper_a) and (
+            lower_R <= self.radius.to("earthRad").value < upper_R
         )
 
-        # Find Planet Rp range
-        Rp_bins = np.array([0, 0.5, 1.0, 1.75, 3.5, 6.0, 14.3, 11.2 * 4.6])
-        # Rp_lo = Rp_bins[:-1]
-        # Rp_hi = Rp_bins[1:]
-        Rp_types = [
-            "Sub-Rocky",
-            "Rocky",
-            "Super-Earth",
-            "Sub-Neptune",
-            "Sub-Jovian",
-            "Jovian",
-            "Super-Jovian",
-        ]
-        self.L_bins = np.array(
-            [
-                [1000, 182, 1.0, 0.28, 0.0035, 5e-5],
-                [1000, 182, 1.0, 0.28, 0.0035, 5e-5],
-                [1000, 187, 1.12, 0.30, 0.0030, 5e-5],
-                [1000, 188, 1.15, 0.32, 0.0030, 5e-5],
-                [1000, 220, 1.65, 0.45, 0.0030, 5e-5],
-                [1000, 220, 1.65, 0.40, 0.0025, 5e-5],
-                [1000, 220, 1.68, 0.45, 0.0025, 5e-5],
-                [1000, 220, 1.68, 0.45, 0.0025, 5e-5],
-            ]
-        )
+        # # Calculate the luminosity of the star, assuming main-sequence
+        # if self.mass < 2 * u.M_sun:
+        #     self.Ls = const.L_sun * (self.star.mass / const.M_sun) ** 4
+        # else:
+        #     self.Ls = 1.4 * const.L_sun * (self.star.mass / const.M_sun) ** 3.5
+        #
+        # Rp = self.radius.to("earthRad").value
+        # # a = self.a.to("AU").value
+        # # e = self.e
+        #
+        # # Find the stellar flux at the planet's location as a fraction of earth's
+        # earth_Lp = const.L_sun / (1 * (1 + (0.0167**2) / 2)) ** 2
+        # self.Lp = (
+        #     self.Ls / (self.a.to("AU").value * (1 + (self.e**2) / 2)) ** 2 / earth_Lp
+        # )
+        #
+        # # Find Planet Rp range
+        # Rp_bins = np.array([0, 0.5, 1.0, 1.75, 3.5, 6.0, 14.3, 11.2 * 4.6])
+        # # Rp_lo = Rp_bins[:-1]
+        # # Rp_hi = Rp_bins[1:]
+        # Rp_types = [
+        #     "Sub-Rocky",
+        #     "Rocky",
+        #     "Super-Earth",
+        #     "Sub-Neptune",
+        #     "Sub-Jovian",
+        #     "Jovian",
+        #     "Super-Jovian",
+        # ]
         # self.L_bins = np.array(
         #     [
+        #         [1000, 182, 1.0, 0.28, 0.0035, 5e-5],
         #         [1000, 182, 1.0, 0.28, 0.0035, 5e-5],
         #         [1000, 187, 1.12, 0.30, 0.0030, 5e-5],
         #         [1000, 188, 1.15, 0.32, 0.0030, 5e-5],
         #         [1000, 220, 1.65, 0.45, 0.0030, 5e-5],
         #         [1000, 220, 1.65, 0.40, 0.0025, 5e-5],
+        #         [1000, 220, 1.68, 0.45, 0.0025, 5e-5],
+        #         [1000, 220, 1.68, 0.45, 0.0025, 5e-5],
         #     ]
         # )
-
-        # Find the bin of the radius
-        self.Rp_bin = np.digitize(Rp, Rp_bins) - 1
-        try:
-            self.Rp_type = Rp_types[self.Rp_bin]
-        except IndexError:
-            print(f"Error handling Rp_type of planet with Rp_bin of {self.Rp_bin}")
-            self.Rp_type = None
-
-        # TODO Fix this to give correct when at edge cases since technically
-        # they're not straight lines
-
-        # index of planet temp. cold,warm,hot
-        L_types = ["Very Hot", "Hot", "Warm", "Cold", "Very Cold"]
-        specific_L_bins = self.L_bins[self.Rp_bin, :]
-        self.L_bin = np.digitize(self.Lp.decompose().value, specific_L_bins) - 1
-        try:
-            self.L_type = L_types[self.L_bin]
-        except IndexError:
-            print(f"Error handling L_type of planet with L_bin of {self.L_bin}")
+        # # self.L_bins = np.array(
+        # #     [
+        # #         [1000, 182, 1.0, 0.28, 0.0035, 5e-5],
+        # #         [1000, 187, 1.12, 0.30, 0.0030, 5e-5],
+        # #         [1000, 188, 1.15, 0.32, 0.0030, 5e-5],
+        # #         [1000, 220, 1.65, 0.45, 0.0030, 5e-5],
+        # #         [1000, 220, 1.65, 0.40, 0.0025, 5e-5],
+        # #     ]
+        # # )
+        #
+        # # Find the bin of the radius
+        # self.Rp_bin = np.digitize(Rp, Rp_bins) - 1
+        # try:
+        #     self.Rp_type = Rp_types[self.Rp_bin]
+        # except IndexError:
+        #     print(f"Error handling Rp_type of planet with Rp_bin of {self.Rp_bin}")
+        #     self.Rp_type = None
+        #
+        # # TODO Fix this to give correct when at edge cases since technically
+        # # they're not straight lines
+        #
+        # # index of planet temp. cold,warm,hot
+        # L_types = ["Very Hot", "Hot", "Warm", "Cold", "Very Cold"]
+        # specific_L_bins = self.L_bins[self.Rp_bin, :]
+        # self.L_bin = np.digitize(self.Lp.decompose().value, specific_L_bins) - 1
+        # try:
+        #     self.L_type = L_types[self.L_bin]
+        # except IndexError:
+        #     print(f"Error handling L_type of planet with L_bin of {self.L_bin}")

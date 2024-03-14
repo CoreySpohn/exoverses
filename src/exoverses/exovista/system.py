@@ -16,7 +16,7 @@ class ExovistaSystem(System):
             Path to the exoVista fits file
     """
 
-    def __init__(self, infile, initial_epoc=2000, convert=False):
+    def __init__(self, infile, initial_epoc=2000, convert=False, filter=True):
         self.file = infile
         self.name = self.file.name
 
@@ -103,6 +103,21 @@ class ExovistaSystem(System):
                     (_E.value - planet.e * np.sin(_E)) % (2 * np.pi) * u.rad
                 ).to(u.deg)
                 planet.solve_dependent_params()
+                planet.classify_planet()
+        if filter:
+            earth_ind = self.getpattr("is_earth")
+            K_vals = self.getpattr("K")
+            max_K = K_vals.max()
+            max_earth_K = self.getpattr("K")[np.argwhere(earth_ind).ravel()]
+            # Remove all planets with K values larger than the largest K value of the Earth
+            # except the larget K value
+            to_remove = np.argwhere(
+                (K_vals > max_earth_K.max()) & (K_vals != max_K)
+            ).ravel()
+            self.planets = [
+                self.planets[i] for i in range(len(self.planets)) if i not in to_remove
+            ]
+            self.planet_cleanup()
 
     def spec_flux_densities(self, wavelengths, times):
         """

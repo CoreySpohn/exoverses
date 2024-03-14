@@ -23,12 +23,13 @@ from exoverses.exovista.system import ExovistaSystem
 
 def create_universe(universe_params, workers=10):
     data_path = Path(universe_params["data_path"])
-    un = universe_params["universe_number"]
     targetlist = universe_params["target_list"]
     convert = universe_params.get("convert")
+    # system_path is used to generate a specific system
     system_path = universe_params.get("system_path")
-    full_path = f"{data_path}/{un}"
-    if Path(system_path).exists():
+    full_path = f"{data_path}"
+    has_system_path = system_path is not None
+    if has_system_path:
         settings = Settings.Settings(timemax=10.0, ncomponents=2, output_dir=full_path)
         s, p, a, d, c, new_settings = read_solarsystem.read_solarsystem(
             settings, system_file=system_path
@@ -38,7 +39,6 @@ def create_universe(universe_params, workers=10):
         generate_systems(targetlist, full_path, workers=workers)
 
     universe = ExovistaUniverse(full_path, targetlist, convert=convert, cache=True)
-    breakpoint()
     return universe
 
 
@@ -77,7 +77,9 @@ class ExovistaUniverse(Universe):
             relevant_files, desc="Loading systems", position=0, leave=False
         ):
             if cache:
-                cache_file = Path(cache_base, system_file.stem + ".p")
+                cache_file = Path(cache_base, "exoverses", system_file.stem + ".p")
+                if not cache_file.parent.exists():
+                    cache_file.parent.mkdir(parents=True)
                 if cache_file.exists():
                     with open(cache_file, "rb") as f:
                         system = dill.load(f)
