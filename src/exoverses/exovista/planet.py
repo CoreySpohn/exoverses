@@ -84,7 +84,7 @@ class ExovistaPlanet(base.planet.Planet):
 
         self.star = star
 
-        # self.classify_planet()
+        self.classify_planet()
 
     def spec_flux_density(self, wavelengths, times):
         """
