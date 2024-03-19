@@ -98,6 +98,8 @@ class ExovistaStar(base.star.Star):
         self.mu = self.mass * const.G
         self.pixel_scale = obj_header["PXSCLMAS"] * u.mas / u.pixel
 
+        self.calc_jitter_terms()
+
     def spec_flux_density(self, wavelengths, times):
         """
         Calculate the spectral flux density of the star at the given wavelengths
