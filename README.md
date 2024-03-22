@@ -3,11 +3,57 @@
 A python library to create a (relatively) uniform set of objects between tools that generate planetary systems. Currently supports ExoVista and EXOSIMS universes.
 
 # Install
-`pip install exoverses` 
+### Base
+`pip install exoverses`
+### EXOSIMS support
+`pip install exoverses[exosims]`
+### ExoVista support
+Currently this uses a fork of Exovista, clone it and install it to whatever environment you are using
+`git clone git@github.com:CoreySpohn/ExoVista.git`
+`cd ExoVista`
+`git checkout pip_support`
+Load whatever environment you are using (e.g. `source my_project/.venv/bin/activate` for a virtual environment or `conda activate my_project` for conda)
+`pip install .`
+
 
 # Usage
 The basic objects are
 - `Universe` object which holds all the `System` objects. Each `System` object has a `Star` object, a list of `Planet` objects, and a `Disk` object (if reading an ExoVista system).
+
+## Planet object
+The minimum definition of a planet is currently
+```
+"t0" - Initial epoch
+"a" - Semi-major axis
+"e" - Eccentricity
+"mass" - Mass
+"radius" - Radius
+"inc" - Inclination
+"W" - Longitude of the ascending node
+"w" - Argument of periapsis
+"M0" - Mean anomaly at initial epoch
+"p" - Geometric albedo
+```
+A planet can be created independently with a dictionary of those values
+```
+from astropy.time import Time
+import astropy.units as u
+from exoverses.base.planet import Planet
+
+planet_dict = {
+"t0": Time(2000, format='decimalyear'),
+"a": 1*u.au,
+"e": 0.1,
+"mass": 1*u.M_Earth,
+"radius": 1*u.R_Earth,
+"inc": 90*u.deg,
+"W": 1*u.deg,
+"w": 1*u.deg,
+"M0": 0*u.deg,
+"p": 0.3,
+}
+simple_planet = Planet(planet_dict)
+```
 
 ## Exovista
 ```
@@ -48,41 +94,5 @@ Planets:
 6   0.259398  30707.489457  0.217181     0.0   2423941.940415186  19.191264  ...  1.295556  0.0  239.00230  2000.0   14.5400   4.007
 
 [7 rows x 14 columns]
-
-
 ```
 
-# Planet object
-The minimum definition of a planet is currently
-```
-"t0" - Initial epoch
-"a" - Semi-major axis
-"e" - Eccentricity
-"mass" - Mass
-"radius" - Radius
-"inc" - Inclination
-"W" - Longitude of the ascending node
-"w" - Argument of periapsis
-"M0" - Mean anomaly at initial epoch
-"p" - Geometric albedo
-```
-A planet can be created independently with a dictionary of those values
-```
-from astropy.time import Time
-import astropy.units as u
-from exoverses.base.planet import Planet
-
-planet_dict = {
-"t0": Time(2000, format='decimalyear'),
-"a": 1*u.au,
-"e": 0.1,
-"mass": 1*u.M_Earth,
-"radius": 1*u.R_Earth,
-"inc": 90*u.deg,
-"W": 1*u.deg,
-"w": 1*u.deg,
-"M0": 0*u.deg,
-"p": 0.3,
-}
-simple_planet = Planet(planet_dict)
-```
