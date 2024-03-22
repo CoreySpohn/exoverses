@@ -95,4 +95,3 @@ Planets:
 
 [7 rows x 14 columns]
 ```
-
