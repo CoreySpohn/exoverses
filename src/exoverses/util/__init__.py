@@ -9,7 +9,7 @@ __all__ = [
     "add_units",
 ]
 
-from misc import (
+from .misc import (
     timetrans_to_timeperi,
     timeperi_to_timetrans,
     Msini,
