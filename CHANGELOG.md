@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/CoreySpohn/exoverses/compare/v0.2.0...v0.2.1) (2024-04-03)
+
+
+### Bug Fixes
+
+* **main:** Remove usage of deprecated open_text importlib.resources method ([4e77086](https://github.com/CoreySpohn/exoverses/commit/4e77086b372a0a02d4ce9608b8e0b151aa7fa86c))
+
 ## [0.2.0](https://github.com/CoreySpohn/exoverses/compare/v0.1.1...v0.2.0) (2024-04-03)
 
 
