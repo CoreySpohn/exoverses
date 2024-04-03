@@ -18,7 +18,7 @@ class ExovistaSystem(System):
 
     def __init__(self, infile, initial_epoc=2000, convert=False, filter=True):
         self.file = infile
-        self.name = self.file.name
+        self.file_name = self.file.name
 
         # fits file extensions, exoVista hard codes these
         planet_ext = 5

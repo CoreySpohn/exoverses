@@ -35,6 +35,10 @@ class System:
             f"Planets:\n{self.get_p_df()}"
         )
 
+    @property
+    def name(self):
+        return self.star.name
+
     def planet_cleanup(self):
         self.pInds = np.arange(len(self.planets))
         # Sort the planets in the system by semi-major axis
