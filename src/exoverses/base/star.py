@@ -1,7 +1,9 @@
+from importlib.resources import files
+from pathlib import Path
+
 import astropy.constants as const
 import astropy.units as u
 import pandas as pd
-from importlib import resources
 
 
 class Star:
@@ -30,8 +32,10 @@ class Star:
         ).decompose()
 
         # Magnetic activity noise scaling relation from Gupta 2021
-        with resources.open_text("exoverses.data", "mamajek_rhk.csv") as f:
-            rhk_df = pd.read_csv(f)
+        # Load rhk values from ExEP target list
+        rhk_df = pd.read_csv(
+            files("exoverses").joinpath(Path("data", "mamajek_rhk.csv"))
+        )
         if self.name in rhk_df["HIP"].values:
             logrhk = rhk_df.loc[rhk_df["HIP"] == self.name]["logR'HK"].item()
             logsigma_mag = 1.66 * logrhk + 8.39
