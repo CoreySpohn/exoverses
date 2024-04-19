@@ -105,17 +105,19 @@ class ExovistaSystem(System):
                 planet.solve_dependent_params()
                 planet.classify_planet()
         if filter:
+            # TODO: Make this more flexible
+            # Keep only the planets that are Earth-like
             earth_ind = self.getpattr("is_earth")
-            K_vals = self.getpattr("K")
-            max_K = K_vals.max()
-            max_earth_K = self.getpattr("K")[np.argwhere(earth_ind).ravel()]
+            # K_vals = self.getpattr("K")
+            # max_K = K_vals.max()
+            # max_earth_K = self.getpattr("K")[np.argwhere(earth_ind).ravel()]
             # Remove all planets with K values larger than the largest K value of the Earth
             # except the larget K value
-            to_remove = np.argwhere(
-                (K_vals > max_earth_K.max()) & (K_vals != max_K)
-            ).ravel()
+            # to_remove = np.argwhere(
+            #     (K_vals > max_earth_K.max()) & (K_vals != max_K)
+            # ).ravel()
             self.planets = [
-                self.planets[i] for i in range(len(self.planets)) if i not in to_remove
+                self.planets[i] for i in range(len(self.planets)) if earth_ind[i]
             ]
             self.planet_cleanup()
 

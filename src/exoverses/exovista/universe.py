@@ -47,7 +47,9 @@ class ExovistaUniverse(Universe):
     Class for the whole exoVista universe
     """
 
-    def __init__(self, path, target_list, convert=False, cache=False):
+    def __init__(
+        self, path, target_list, convert=False, cache=False, initial_epoch=2000
+    ):
         """
         Args:
             path (str or Path):
@@ -102,12 +104,13 @@ class ExovistaUniverse(Universe):
 
 def generate_systems(targetlist, path, workers=12):
     settings = Settings.Settings(timemax=10.0, output_dir=path)
+    settings.emax = 0.1
 
     stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)
     print("\n{0:d} stars in model ranges.".format(len(stars)))
 
     planets, albedos = generate_planets.generate_planets(
-        stars, settings, force_earth=True
+        stars, settings, force_earth=False
     )
     disks, compositions = generate_disks.generate_disks(
         stars, planets, settings, nexozodis=nexozodis

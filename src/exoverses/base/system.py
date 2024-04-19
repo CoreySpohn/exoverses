@@ -39,6 +39,10 @@ class System:
     def name(self):
         return self.star.name
 
+    @property
+    def has_planets(self):
+        return len(self.planets) > 0
+
     def planet_cleanup(self):
         self.pInds = np.arange(len(self.planets))
         # Sort the planets in the system by semi-major axis
@@ -68,31 +72,34 @@ class System:
             return [getattr(planet, attr) for planet in self.planets]
 
     def get_p_df(self):
-        patts = [
-            "K",
-            "T",
-            "secosw",
-            "sesinw",
-            "T_c",
-            "a",
-            "e",
-            "inc",
-            "W",
-            "w",
-            "M0",
-            "t0",
-            "mass",
-            "radius",
-        ]
-        p_df = pd.DataFrame()
-        for att in patts:
-            pattr = self.getpattr(att)
-            if type(pattr) == u.Quantity:
-                p_df[att] = pattr.value
-            else:
-                p_df[att] = pattr
+        if self.has_planets:
+            patts = [
+                "K",
+                "T",
+                "secosw",
+                "sesinw",
+                "T_c",
+                "a",
+                "e",
+                "inc",
+                "W",
+                "w",
+                "M0",
+                "t0",
+                "mass",
+                "radius",
+            ]
+            p_df = pd.DataFrame()
+            for att in patts:
+                pattr = self.getpattr(att)
+                if type(pattr) == u.Quantity:
+                    p_df[att] = pattr.value
+                else:
+                    p_df[att] = pattr
 
-        return p_df
+            return p_df
+        else:
+            return "No planets in system."
 
     def propagate_rv(self, times):
         """

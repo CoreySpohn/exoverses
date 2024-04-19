@@ -281,7 +281,7 @@ class Planet:
         L_bin = np.digitize(Lp, specific_L_bins) - 1
         L_bin = max(0, min(L_bin, len(L_types) - 1))
         L_type = L_types[L_bin]
-        self.subtype = f"{Rp_type} {L_type}"
+        self.subtype = f"{L_type} {Rp_type.lower()}"
 
         # Determine if the planet is Earth-like
         # Reverse luminosity scaling
