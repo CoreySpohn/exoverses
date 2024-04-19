@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/CoreySpohn/exoverses/compare/v0.2.1...v0.2.2) (2024-04-19)
+
+
+### Bug Fixes
+
+* **main:** Improved the has_planets property, better planet classification string ([cf71a73](https://github.com/CoreySpohn/exoverses/commit/cf71a735a772c310f315c38b366d14c75f66de1f))
+
 ## [0.2.1](https://github.com/CoreySpohn/exoverses/compare/v0.2.0...v0.2.1) (2024-04-03)
 
 
