@@ -25,6 +25,7 @@ def create_universe(universe_params, workers=10):
     data_path = Path(universe_params["data_path"])
     targetlist = universe_params["target_list"]
     convert = universe_params.get("convert")
+    seed = universe_params["forced_seed"]
     # system_path is used to generate a specific system
     system_path = universe_params.get("system_path")
     full_path = f"{data_path}"
@@ -36,7 +37,7 @@ def create_universe(universe_params, workers=10):
         )
         generate_scene.generate_scene(s, p, d, a, c, new_settings)
     else:
-        generate_systems(targetlist, full_path, workers=workers)
+        generate_systems(targetlist, full_path, seed, workers=workers)
 
     universe = ExovistaUniverse(full_path, targetlist, convert=convert, cache=True)
     return universe
@@ -57,7 +58,7 @@ class ExovistaUniverse(Universe):
         """
         self.type = "ExoVista"
         if cache:
-            cache_base = Path(".cache", path.split("/")[1])
+            cache_base = Path(*(Path(path).parts[:-1]))
             if not cache_base.exists():
                 cache_base.mkdir(parents=True)
         self.path = path
@@ -102,8 +103,8 @@ class ExovistaUniverse(Universe):
         super().__init__()
 
 
-def generate_systems(targetlist, path, workers=12):
-    settings = Settings.Settings(timemax=10.0, output_dir=path)
+def generate_systems(targetlist, path, seed, workers=12):
+    settings = Settings.Settings(timemax=10.0, output_dir=path, seed=seed)
     settings.emax = 0.1
 
     stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)
