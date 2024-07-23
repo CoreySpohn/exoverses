@@ -54,7 +54,7 @@ class FitSystem(System):
         p_df = pd.DataFrame()
         for att in patts:
             pattr = self.getpattr(att)
-            if type(pattr) == u.Quantity:
+            if isinstance(pattr, u.Quantity):
                 p_df[att] = pattr.value
             else:
                 p_df[att] = pattr

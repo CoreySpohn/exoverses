@@ -64,7 +64,7 @@ class System:
     def getpattr(self, attr):
         # Return array of all planet's attribute value, e.g. all semi-major
         # axis values
-        if type(getattr(self.planets[0], attr)) == u.Quantity:
+        if isinstance(getattr(self.planets[0], attr), u.Quantity):
             return [getattr(planet, attr).value for planet in self.planets] * getattr(
                 self.planets[0], attr
             ).unit
@@ -92,7 +92,7 @@ class System:
             p_df = pd.DataFrame()
             for att in patts:
                 pattr = self.getpattr(att)
-                if type(pattr) == u.Quantity:
+                if isinstance(pattr, u.Quantity):
                     p_df[att] = pattr.value
                 else:
                     p_df[att] = pattr

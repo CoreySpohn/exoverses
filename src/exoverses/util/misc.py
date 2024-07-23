@@ -125,7 +125,9 @@ def Msini(K, P, Mstar, e, Msini_units="earth"):
             n_elements = 1
         else:
             assert (
-                type(K) == type(P) == type(Mstar) == type(e)
+                (type(K) is type(P))
+                and (type(P) is type(Mstar))
+                and (type(Mstar) is type(e))
             ), "All input data types must match."
             assert (
                 K.size == P.size == Mstar.size == e.size

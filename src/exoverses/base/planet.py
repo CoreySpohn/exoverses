@@ -26,9 +26,9 @@ class Planet:
         params = self.dump_params()
         res = {}
         for key, val in params.items():
-            if type(val) == u.Quantity:
+            if isinstance(val, u.Quantity):
                 res[key] = val.value
-            elif type(val) == Time:
+            elif isinstance(val, Time):
                 res[key] = val.decimalyear
             else:
                 res[key] = val
