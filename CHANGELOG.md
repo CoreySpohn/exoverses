@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/CoreySpohn/exoverses/compare/v0.2.2...v0.2.3) (2024-07-23)
+
+
+### Bug Fixes
+
+* **main:** Removed hardcoded exovista universe cache directory ([d0cad18](https://github.com/CoreySpohn/exoverses/commit/d0cad181491b50d61407167904a52e023c5abc8c))
+
 ## [0.2.2](https://github.com/CoreySpohn/exoverses/compare/v0.2.1...v0.2.2) (2024-04-19)
 
 
