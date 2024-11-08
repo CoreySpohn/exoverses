@@ -2,7 +2,7 @@ import astropy.units as u
 import numpy as np
 from astropy.io.fits import getdata
 from astropy.time import Time
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 
 import exoverses.base as base
 
@@ -50,19 +50,21 @@ class ExovistaPlanet(base.planet.Planet):
         self.phase_angles = obj_data[:, 15]
 
         self.contrast = obj_data[:, 16:]
-        self.contrast_interp = interp2d(
+        self.cont_interp = RectBivariateSpline(
             self._wavelengths,
             self._t.decimalyear * u.yr,
-            self.contrast,
-            kind="quintic",
+            self.contrast.T,
+            kx=4,
+            ky=4,
         )
 
         # Spectral flux density of the planet
-        self.planet_spec_flux_density_interp = interp2d(
+        self.planet_spec_flux_density_interp = RectBivariateSpline(
             self._wavelengths,
             self._t.decimalyear * u.yr,
-            np.multiply(self.contrast, star._star_flux_density),
-            kind="quintic",
+            np.multiply(self.contrast, star._star_flux_density).T,
+            kx=4,
+            ky=4,
         )
 
         # Initial mean anomaly
@@ -100,7 +102,8 @@ class ExovistaPlanet(base.planet.Planet):
                 Spectral flux density values
         """
         return (
-            self.planet_spec_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
+            self.planet_spec_flux_density_interp(wavelengths, times.decimalyear).T
+            * u.Jy
         )
 
     # def rotate_to_sky_coords(self, vec, roll_angle=0 * u.rad):

@@ -4,7 +4,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.io.fits import getdata
 from astropy.time import Time
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 
 import exoverses.base as base
 
@@ -44,11 +44,12 @@ class ExovistaStar(base.star.Star):
 
         # Load star's spectral flux density in Janskys
         self._star_flux_density = np.array(obj_data[:, 16:])
-        self.star_flux_density_interp = interp2d(
+        self.star_flux_density_interp = RectBivariateSpline(
             self._wavelengths,
             self._t.decimalyear * u.yr,
-            self._star_flux_density,
-            kind="quintic",
+            self._star_flux_density.T,
+            kx=4,
+            ky=4,
         )
 
         # System identifiers
@@ -113,4 +114,4 @@ class ExovistaStar(base.star.Star):
             F (astropy Quantity array):
                 Spectral flux density values
         """
-        return self.star_flux_density_interp(wavelengths, times.decimalyear) * u.Jy
+        return self.star_flux_density_interp(wavelengths, times.decimalyear).T * u.Jy
