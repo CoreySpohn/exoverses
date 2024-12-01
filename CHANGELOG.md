@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.3](https://github.com/CoreySpohn/exoverses/compare/v0.2.2...v0.2.3) (2024-12-01)
+
+
+### Bug Fixes
+
+* Add filtering flags to exovista universe ([81e3e9d](https://github.com/CoreySpohn/exoverses/commit/81e3e9df9cf7bee5008977f0049833cc4b14d69c))
+* **main:** Removed hardcoded exovista universe cache directory ([d0cad18](https://github.com/CoreySpohn/exoverses/commit/d0cad181491b50d61407167904a52e023c5abc8c))
+* Transition from interp2d to RectBivariateSpline ([45fe6cd](https://github.com/CoreySpohn/exoverses/commit/45fe6cd136c1e71124b065dbfb8216fc643c7b04))
+
 ## [0.2.2](https://github.com/CoreySpohn/exoverses/compare/v0.2.1...v0.2.2) (2024-04-19)
 
 
