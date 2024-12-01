@@ -25,6 +25,7 @@ def create_universe(universe_params, workers=10):
     data_path = Path(universe_params["data_path"])
     targetlist = universe_params["target_list"]
     convert = universe_params.get("convert")
+    filter = universe_params.get("filter", False)
     seed = universe_params["forced_seed"]
     # system_path is used to generate a specific system
     system_path = universe_params.get("system_path")
@@ -39,7 +40,9 @@ def create_universe(universe_params, workers=10):
     else:
         generate_systems(targetlist, full_path, seed, workers=workers)
 
-    universe = ExovistaUniverse(full_path, targetlist, convert=convert, cache=True)
+    universe = ExovistaUniverse(
+        full_path, targetlist, convert=convert, cache=True, filter=filter
+    )
     return universe
 
 
@@ -49,7 +52,13 @@ class ExovistaUniverse(Universe):
     """
 
     def __init__(
-        self, path, target_list, convert=False, cache=False, initial_epoch=2000
+        self,
+        path,
+        target_list,
+        convert=False,
+        cache=False,
+        initial_epoch=2000,
+        filter=False,
     ):
         """
         Args:
@@ -87,12 +96,12 @@ class ExovistaUniverse(Universe):
                     with open(cache_file, "rb") as f:
                         system = dill.load(f)
                 else:
-                    system = ExovistaSystem(system_file, convert=convert)
+                    system = ExovistaSystem(system_file, convert=convert, filter=filter)
                     with open(cache_file, "wb") as f:
                         dill.dump(system, f)
                 self.systems.append(system)
             else:
-                system = ExovistaSystem(system_file)
+                system = ExovistaSystem(system_file, convert=convert, filter=filter)
                 if system is not None:
                     self.systems.append(system)
 

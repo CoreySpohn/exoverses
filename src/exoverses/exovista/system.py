@@ -16,7 +16,7 @@ class ExovistaSystem(System):
             Path to the exoVista fits file
     """
 
-    def __init__(self, infile, initial_epoc=2000, convert=False, filter=True):
+    def __init__(self, infile, initial_epoc=2000, convert=False, filter=False):
         self.file = infile
         self.file_name = self.file.name
 
