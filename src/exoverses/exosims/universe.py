@@ -14,7 +14,7 @@ def create_universe(universe_params):
     with open(script_path) as f:
         specs = json.loads(f.read())
     assert "seed" in specs.keys(), (
-        "For reproducibility the seed should" " not be randomized by EXOSIMS."
+        "For reproducibility the seed should not be randomized by EXOSIMS."
     )
 
     # Need to use SurveySimulation if we want to have a random seed
