@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/CoreySpohn/exoverses/compare/v0.2.3...v0.3.0) (2025-06-26)
+
+
+### Features
+
+* Enhance ExovistaDisk initialization with header data ([3565ca8](https://github.com/CoreySpohn/exoverses/commit/3565ca86843276823d7036d556b32e23284ae361))
+
 ## [0.2.3](https://github.com/CoreySpohn/exoverses/compare/v0.2.2...v0.2.3) (2024-12-01)
 
 
