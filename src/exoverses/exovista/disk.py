@@ -10,7 +10,7 @@ class ExovistaDisk(base.disk.Disk):
     def __init__(self, infile, fits_ext, star):
         self.star = star
         with open(infile, "rb") as f:
-            obj_data, _ = fits.getdata(f, ext=fits_ext, header=True, memmap=False)
+            obj_data, header = fits.getdata(f, ext=fits_ext, header=True, memmap=False)
             self._wavelengths = (
                 fits.getdata(f, ext=fits_ext - 1, header=False, memmap=False) * u.um
             )
@@ -19,6 +19,8 @@ class ExovistaDisk(base.disk.Disk):
         # removing the last because it is a 2d map estimating the fractional
         # numerical noise in the contrast calculations
         self.contrast = obj_data[:-1]
+        self.pixel_scale = header["PXSCLMAS"] * u.mas / u.pixel
+        self.header = header
 
         self.disk_contrast_interp = interp1d(
             np.arange(len(self._wavelengths)),
