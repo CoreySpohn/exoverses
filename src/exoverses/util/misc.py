@@ -129,9 +129,9 @@ def Msini(K, P, Mstar, e, Msini_units="earth"):
                 and (type(P) is type(Mstar))
                 and (type(Mstar) is type(e))
             ), "All input data types must match."
-            assert (
-                K.size == P.size == Mstar.size == e.size
-            ), "All input arrays must have the same length."
+            assert K.size == P.size == Mstar.size == e.size, (
+                "All input arrays must have the same length."
+            )
             n_elements = len(P)
         for i in range(n_elements):
 
@@ -341,9 +341,9 @@ def add_units(
         if new_unit.physical_type == "length":
             converted_data = base_data.to(new_unit)
         elif new_unit.physical_type == "angle":
-            assert (
-                distance is not None
-            ), "Distance to system not provided for angular conversion."
+            assert distance is not None, (
+                "Distance to system not provided for angular conversion."
+            )
             converted_data = (
                 np.arctan(base_data.to(u.m).value / distance.to(u.m).value) * u.rad
             ).to(new_unit)
