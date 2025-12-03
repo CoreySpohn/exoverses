@@ -15,6 +15,7 @@ class ExovistaDisk(base.disk.Disk):
                 fits.getdata(f, ext=fits_ext - 1, header=False, memmap=False) * u.um
             )
 
+        self._lam_nm = self._wavelengths.to_value(u.nm)
         # The debris disk contrast cube (disk flux divided by star flux),
         # removing the last because it is a 2d map estimating the fractional
         # numerical noise in the contrast calculations
@@ -23,7 +24,7 @@ class ExovistaDisk(base.disk.Disk):
         self.header = header
 
         self.disk_contrast_interp = interp1d(
-            np.arange(len(self._wavelengths)),
+            np.arange(len(self._lam_nm)),
             self.contrast,
             kind="cubic",
             axis=0,
@@ -46,18 +47,19 @@ class ExovistaDisk(base.disk.Disk):
         """
         # Determine the indices the wavelengths we want to calculate the scene
         # are with respect to the disk wavelengths
-        inds = np.searchsorted(self._wavelengths, wavelengths) - 1
+        wavelengths_nm = wavelengths.to_value(u.nm)
+        wavelengths_um = wavelengths.to_value(u.um)
+        inds = np.searchsorted(self._lam_nm, wavelengths_nm) - 1
 
         # Determine the fractional index, with respect to the indices of the
         # wavelengths the disk was generated at, of the wavelengths we want to
         # calculate the scene at, since the disk interpolant is over the
         # wavelength index instead of the actual wavelength
         fracinds = inds + (
-            np.log(wavelengths.to(u.um).value)
-            - np.log(self._wavelengths[inds].to(u.um).value)
+            np.log(wavelengths_um) - np.log(self._wavelengths[inds].to_value(u.um))
         ) / (
-            np.log(self._wavelengths[inds + 1].to(u.um).value)
-            - np.log(self._wavelengths[inds].to(u.um).value)
+            np.log(self._wavelengths[inds + 1].to_value(u.um))
+            - np.log(self._wavelengths[inds].to_value(u.um))
         )
         # Interpolate the disk to our desired wavelengths
         disk_contrast = self.disk_contrast_interp(fracinds).T
@@ -78,7 +80,7 @@ class ExovistaDisk(base.disk.Disk):
         shape.append(self.contrast.shape[2])
         shape = tuple(shape)
 
-        disk_flux_density = np.zeros(shape) * u.Jy
+        disk_flux_density = np.zeros(shape) << u.Jy
         # Calculate the star's spectral flux density at the desired wavelengths
         star_flux_density = self.star.spec_flux_density(wavelengths, times)
         if not single_eval:

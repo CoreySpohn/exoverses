@@ -45,8 +45,8 @@ class ExovistaStar(base.star.Star):
         # Load star's spectral flux density in Janskys
         self._star_flux_density = np.array(obj_data[:, 16:])
         self.star_flux_density_interp = RectBivariateSpline(
-            self._wavelengths,
-            self._t.decimalyear * u.yr,
+            self._wavelengths.to_value(u.nm),
+            self._t.decimalyear,
             self._star_flux_density.T,
             kx=4,
             ky=4,
@@ -114,4 +114,9 @@ class ExovistaStar(base.star.Star):
             F (astropy Quantity array):
                 Spectral flux density values
         """
-        return self.star_flux_density_interp(wavelengths, times.decimalyear).T * u.Jy
+        return (
+            self.star_flux_density_interp(
+                wavelengths.to_value(u.nm), times.decimalyear
+            ).T
+            * u.Jy
+        )

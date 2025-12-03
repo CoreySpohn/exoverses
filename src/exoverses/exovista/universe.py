@@ -113,7 +113,9 @@ class ExovistaUniverse(Universe):
 
 
 def generate_systems(targetlist, path, seed, workers=12):
-    settings = Settings.Settings(timemax=10.0, output_dir=path, seed=seed)
+    settings = Settings.Settings(
+        timemax=10.0, output_dir=path, seed=seed, npix=500, pixscale=0.0066
+    )
     settings.emax = 0.1
 
     stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)

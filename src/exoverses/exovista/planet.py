@@ -60,8 +60,8 @@ class ExovistaPlanet(base.planet.Planet):
 
         # Spectral flux density of the planet
         self.planet_spec_flux_density_interp = RectBivariateSpline(
-            self._wavelengths,
-            self._t.decimalyear * u.yr,
+            self._wavelengths.to_value(u.nm),
+            self._t.decimalyear,
             np.multiply(self.contrast, star._star_flux_density).T,
             kx=4,
             ky=4,
@@ -102,8 +102,10 @@ class ExovistaPlanet(base.planet.Planet):
                 Spectral flux density values
         """
         return (
-            self.planet_spec_flux_density_interp(wavelengths, times.decimalyear).T
-            * u.Jy
+            self.planet_spec_flux_density_interp(
+                wavelengths.to_value(u.nm), times.decimalyear
+            ).T
+            << u.Jy
         )
 
     # def rotate_to_sky_coords(self, vec, roll_angle=0 * u.rad):
