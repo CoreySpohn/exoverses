@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/CoreySpohn/exoverses/compare/v0.3.0...v0.3.1) (2025-12-16)
+
+
+### Bug Fixes
+
+* Refactor ExoVista classes to use units consistently ([8d63b1d](https://github.com/CoreySpohn/exoverses/commit/8d63b1d93ace5cc9d7f928869a0472a0f79bea7e))
+
 ## [0.3.1](https://github.com/CoreySpohn/exoverses/compare/v0.3.0...v0.3.1) (2025-12-15)
 
 
