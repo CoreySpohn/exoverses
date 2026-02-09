@@ -17,7 +17,7 @@ dependencies = [
   "tqdm>=4.56.0",
   "dill",
 ]
-optional-dependencies = { exosims = ["EXOSIMS"] }
+optional-dependencies = { exosims = ["EXOSIMS"], jax = ["jax", "equinox", "interpax", "orbix"] }
 license = { file = "LICENSE" }
 dynamic = ['readme', 'version']
 classifiers = [

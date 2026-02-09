@@ -21,24 +21,58 @@ from exoverses.base.universe import Universe
 from exoverses.exovista.system import ExovistaSystem
 
 
-def create_universe(universe_params, workers=10):
+def create_universe(universe_params, workers=10, nexozodis=None):
+    """
+    Create an ExoVista universe with planetary systems.
+
+    Args:
+        universe_params:
+            Dictionary containing:
+            - data_path: Path to store generated FITS files
+            - target_list: Path to CSV file with target stars
+            - convert: Whether to convert to barycentric coordinates
+            - filter: Whether to filter for Earth-like planets only
+            - forced_seed: Random seed for reproducibility
+            - system_path: Optional path to specific system file
+            - timemin: Start time in years since J2000.0 (default 0)
+            - timemax: End time in years since J2000.0 (default 10)
+        workers:
+            Number of parallel workers for generation
+
+    Returns:
+        ExovistaUniverse object containing the generated systems.
+    """
     data_path = Path(universe_params["data_path"])
     targetlist = universe_params["target_list"]
     convert = universe_params.get("convert")
     filter = universe_params.get("filter", False)
     seed = universe_params["forced_seed"]
+    # Time parameters in years since J2000.0
+    # e.g., timemin=35.0 means year 2035.0
+    timemin = universe_params.get("timemin", 0.0)
+    timemax = universe_params.get("timemax", 10.0)
     # system_path is used to generate a specific system
     system_path = universe_params.get("system_path")
     full_path = f"{data_path}"
     has_system_path = system_path is not None
     if has_system_path:
-        settings = Settings.Settings(timemax=10.0, ncomponents=2, output_dir=full_path)
+        settings = Settings.Settings(
+            timemin=timemin, timemax=timemax, ncomponents=2, output_dir=full_path
+        )
         s, p, a, d, c, new_settings = read_solarsystem.read_solarsystem(
             settings, system_file=system_path
         )
         generate_scene.generate_scene(s, p, d, a, c, new_settings)
     else:
-        generate_systems(targetlist, full_path, seed, workers=workers)
+        generate_systems(
+            targetlist,
+            full_path,
+            seed,
+            timemin=timemin,
+            timemax=timemax,
+            workers=workers,
+            nexozodis=nexozodis,
+        )
 
     universe = ExovistaUniverse(
         full_path, targetlist, convert=convert, cache=True, filter=filter
@@ -112,13 +146,43 @@ class ExovistaUniverse(Universe):
         super().__init__()
 
 
-def generate_systems(targetlist, path, seed, workers=12):
+def generate_systems(
+    targetlist, path, seed, timemin=0.0, timemax=10.0, workers=12, nexozodis=None
+):
+    """
+    Generate ExoVista planetary systems for target stars.
+
+    Args:
+        targetlist:
+            Path to CSV file with target stars.
+        path:
+            Output directory for FITS files.
+        seed:
+            Random seed for reproducibility.
+        timemin:
+            Start time in years since J2000.0 (default 0).
+        timemax:
+            End time in years since J2000.0 (default 10).
+        workers:
+            Number of parallel workers.
+        nexozodis:
+            Number of exozodi levels to generate.
+    """
     settings = Settings.Settings(
-        timemax=10.0, output_dir=path, seed=seed, npix=500, pixscale=0.0066
+        timemin=timemin,
+        timemax=timemax,
+        output_dir=path,
+        seed=seed,
+        npix=500,
+        pixscale=0.0066,
     )
     settings.emax = 0.1
 
-    stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)
+    if nexozodis is None:
+        stars, nexozodis = load_stars.load_stars(targetlist, from_master=True)
+    else:
+        stars, _ = load_stars.load_stars(targetlist, from_master=True)
+        nexozodis = np.full(len(stars), nexozodis)
     print("\n{0:d} stars in model ranges.".format(len(stars)))
 
     planets, albedos = generate_planets.generate_planets(
