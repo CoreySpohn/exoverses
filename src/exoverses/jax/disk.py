@@ -47,9 +47,7 @@ class Disk(eqx.Module):
             wavelengths_nm, contrast_cube, axis=0
         )
 
-    def spec_flux_density(
-        self, wavelength_nm: float, time_jd: float
-    ) -> jnp.ndarray:
+    def spec_flux_density(self, wavelength_nm: float, time_jd: float) -> jnp.ndarray:
         """Disk flux density [ph/s/m²/nm], shape ``(ny, nx)``."""
         contrast = self._contrast_interp(wavelength_nm)
         star_flux = self.star.spec_flux_density(wavelength_nm, time_jd)

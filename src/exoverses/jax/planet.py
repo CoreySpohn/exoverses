@@ -54,16 +54,12 @@ class Planet(eqx.Module):
 
     def position(self, time_jd: float) -> jnp.ndarray:
         """On-sky (dRA, dDec) in arcsec, shape ``(2, n_planets)``."""
-        ra, dec = self.orbix_planet.prop_ra_dec(
-            TRIG_SOLVER, jnp.atleast_1d(time_jd)
-        )
+        ra, dec = self.orbix_planet.prop_ra_dec(TRIG_SOLVER, jnp.atleast_1d(time_jd))
         return jnp.stack([ra[:, 0], dec[:, 0]])
 
     def alpha_dMag(self, time_jd: float):
         """Angular separation [arcsec] and delta-mag, each ``(n_planets,)``."""
-        alpha, dMag = self.orbix_planet.alpha_dMag(
-            TRIG_SOLVER, jnp.atleast_1d(time_jd)
-        )
+        alpha, dMag = self.orbix_planet.alpha_dMag(TRIG_SOLVER, jnp.atleast_1d(time_jd))
         return alpha[:, 0], dMag[:, 0]
 
     # ── Spectral contrast ────────────────────────────────────────────
@@ -75,9 +71,7 @@ class Planet(eqx.Module):
         interp = jax.vmap(self.contrast_interp, in_axes=(None, 0, 0))
         return interp(wavelength_nm, mean_anomalies_deg, planet_indices)
 
-    def spec_flux_density(
-        self, wavelength_nm: float, time_jd: float
-    ) -> jnp.ndarray:
+    def spec_flux_density(self, wavelength_nm: float, time_jd: float) -> jnp.ndarray:
         """Planet flux density [ph/s/m²/nm], shape ``(n_planets,)``."""
         c = self.contrast(wavelength_nm, time_jd)
         star_flux = self.star.spec_flux_density(wavelength_nm, time_jd)
