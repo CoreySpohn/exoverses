@@ -147,8 +147,15 @@ def _load_planets(
     """Load planets from ExoVista FITS."""
     planet_ext_start = 5
     oe_params: dict[str, list] = {
-        "a": [], "e": [], "i": [], "W": [], "w": [],
-        "M0": [], "mass": [], "radius": [], "p": [],
+        "a": [],
+        "e": [],
+        "i": [],
+        "W": [],
+        "w": [],
+        "M0": [],
+        "mass": [],
+        "radius": [],
+        "p": [],
     }
     contrast_grids: list[jnp.ndarray] = []
 
@@ -342,9 +349,7 @@ def get_earth_like_planet_indices(fits_file: str) -> list[int]:
     earth_indices: list[int] = []
     for i in range(n_planets_total):
         with open(fits_file, "rb") as f:
-            _, planet_header = getdata(
-                f, ext=5 + i, header=True, memmap=False
-            )
+            _, planet_header = getdata(f, ext=5 + i, header=True, memmap=False)
         a_au = planet_header.get("A", 1.0)
         radius_rearth = planet_header.get("R", 1.0)
         a_scaled = a_au / np.sqrt(star_luminosity_lsun)
