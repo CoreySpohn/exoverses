@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/CoreySpohn/exoverses/compare/v0.3.1...v0.4.0) (2026-02-16)
+
+
+### Features
+
+* Add equinox modules for jax support ([bd12efb](https://github.com/CoreySpohn/exoverses/commit/bd12efb65ec9e7e9b98ca5cf74daa41dc64470ec))
+
 ## [0.3.1](https://github.com/CoreySpohn/exoverses/compare/v0.3.0...v0.3.1) (2025-12-16)
 
 
