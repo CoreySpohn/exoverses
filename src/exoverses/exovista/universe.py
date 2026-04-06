@@ -7,7 +7,7 @@ import astropy.io.fits as fits
 import dill
 import numpy as np
 import pandas as pd
-from ExoVista import (
+from exovista import (
     Settings,
     generate_disks,
     generate_planets,
