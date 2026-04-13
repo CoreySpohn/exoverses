@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/CoreySpohn/exoverses/compare/v0.4.0...v0.4.1) (2026-04-13)
+
+
+### Bug Fixes
+
+* Update ExoVista to exovista ([ffd81f3](https://github.com/CoreySpohn/exoverses/commit/ffd81f36c198963f7afb5695e954636169cd34df))
+
 ## [0.4.0](https://github.com/CoreySpohn/exoverses/compare/v0.3.1...v0.4.0) (2026-02-16)
 
 
