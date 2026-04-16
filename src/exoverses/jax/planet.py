@@ -41,14 +41,14 @@ class Planet(eqx.Module):
         self.star = star
         self.orbix_planet = orbix_planet
         self.contrast_interp = contrast_interp
-        self.n_planets = orbix_planet.a.shape[0]
+        self.n_planets = orbix_planet.a_AU.shape[0]
 
     # ── Orbital propagation ──────────────────────────────────────────
 
     def mean_anomaly(self, time_jd: float) -> jnp.ndarray:
         """Mean anomalies at *time_jd* [deg], shape ``(n_planets,)``."""
         return jnp.rad2deg(
-            mean_anomaly_tp(time_jd, self.orbix_planet.n, self.orbix_planet.tp)
+            mean_anomaly_tp(time_jd, self.orbix_planet.n_radpd, self.orbix_planet.tp_d)
             % (2 * jnp.pi)
         )
 

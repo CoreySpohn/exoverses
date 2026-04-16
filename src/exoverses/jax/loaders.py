@@ -203,21 +203,21 @@ def _load_planets(
 
         # Mean anomaly → regular grid for contrast interpolation
         temp_planet = OrbixPlanets(
-            Ms=jnp.atleast_1d(star.mass_kg),
-            dist=jnp.atleast_1d(star.dist_pc),
-            a=jnp.atleast_1d(oe_params["a"][-1]),
+            Ms_kg=jnp.atleast_1d(star.mass_kg),
+            dist_pc=jnp.atleast_1d(star.dist_pc),
+            a_AU=jnp.atleast_1d(oe_params["a"][-1]),
             e=jnp.atleast_1d(oe_params["e"][-1]),
-            W=jnp.atleast_1d(jnp.deg2rad(oe_params["W"][-1])),
-            i=jnp.atleast_1d(jnp.deg2rad(oe_params["i"][-1])),
-            w=jnp.atleast_1d(jnp.deg2rad(oe_params["w"][-1])),
-            M0=jnp.atleast_1d(jnp.deg2rad(oe_params["M0"][-1])),
-            t0=jnp.atleast_1d(t0),
-            Mp=jnp.atleast_1d(oe_params["mass"][-1]),
-            Rp=jnp.atleast_1d(oe_params["radius"][-1]),
-            p=jnp.atleast_1d(oe_params["p"][-1]),
+            W_rad=jnp.atleast_1d(jnp.deg2rad(oe_params["W"][-1])),
+            i_rad=jnp.atleast_1d(jnp.deg2rad(oe_params["i"][-1])),
+            w_rad=jnp.atleast_1d(jnp.deg2rad(oe_params["w"][-1])),
+            M0_rad=jnp.atleast_1d(jnp.deg2rad(oe_params["M0"][-1])),
+            t0_d=jnp.atleast_1d(t0),
+            Mp_Mearth=jnp.atleast_1d(oe_params["mass"][-1]),
+            Rp_Rearth=jnp.atleast_1d(oe_params["radius"][-1]),
+            Ag=jnp.atleast_1d(oe_params["p"][-1]),
         )
         mean_anom_coords = jnp.rad2deg(
-            mean_anomaly_tp(times_jd, temp_planet.n, temp_planet.tp) % (2 * jnp.pi)
+            mean_anomaly_tp(times_jd, temp_planet.n_radpd, temp_planet.tp_d) % (2 * jnp.pi)
         )
 
         # Resample onto regular mean-anomaly grid
@@ -276,18 +276,18 @@ def _load_planets(
 
     # Build single OrbixPlanets object
     orbix_planets = OrbixPlanets(
-        Ms=jnp.atleast_1d(star.mass_kg),
-        dist=jnp.atleast_1d(star.dist_pc),
-        a=jnp.array(oe_params["a"]),
+        Ms_kg=jnp.atleast_1d(star.mass_kg),
+        dist_pc=jnp.atleast_1d(star.dist_pc),
+        a_AU=jnp.array(oe_params["a"]),
         e=jnp.array(oe_params["e"]),
-        W=jnp.deg2rad(jnp.array(oe_params["W"])),
-        i=jnp.deg2rad(jnp.array(oe_params["i"])),
-        w=jnp.deg2rad(jnp.array(oe_params["w"])),
-        M0=jnp.deg2rad(jnp.array(oe_params["M0"])),
-        t0=jnp.repeat(t0, n_total),
-        Mp=jnp.array(oe_params["mass"]),
-        Rp=jnp.array(oe_params["radius"]),
-        p=jnp.array(oe_params["p"]),
+        W_rad=jnp.deg2rad(jnp.array(oe_params["W"])),
+        i_rad=jnp.deg2rad(jnp.array(oe_params["i"])),
+        w_rad=jnp.deg2rad(jnp.array(oe_params["w"])),
+        M0_rad=jnp.deg2rad(jnp.array(oe_params["M0"])),
+        t0_d=jnp.repeat(t0, n_total),
+        Mp_Mearth=jnp.array(oe_params["mass"]),
+        Rp_Rearth=jnp.array(oe_params["radius"]),
+        Ag=jnp.array(oe_params["p"]),
     )
 
     # Stack contrast grids → 3D interpolator
