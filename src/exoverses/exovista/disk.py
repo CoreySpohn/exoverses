@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 from scipy.interpolate import interp1d
 
-import exoverses.base as base
+from exoverses import base
 
 
 class ExovistaDisk(base.disk.Disk):
