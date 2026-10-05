@@ -203,9 +203,7 @@ def gen_rotate_to_sky_coords(
         vector[:, 2] = -vector[:, 2]
     else:
         raise Exception(
-            "Convention must be either 'exovista' or 'radvel', got {}".format(
-                convention
-            )
+            f"Convention must be either 'exovista' or 'radvel', got {convention}"
         )
     return vector
 
