@@ -5,7 +5,7 @@ import pandas as pd
 from astropy.time import Time
 from keplertools import fun as kt
 
-import exoverses.util.misc as misc
+from exoverses.util import misc
 
 
 class Planet:
