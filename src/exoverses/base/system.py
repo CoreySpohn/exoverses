@@ -8,7 +8,7 @@ from astropy.time import Time
 from keplertools import fun as kt
 from tqdm import tqdm
 
-import exoverses.util.misc as misc
+from exoverses.util import misc
 
 
 class System:

@@ -3,10 +3,10 @@ import os
 import subprocess
 from pathlib import Path
 
-import astropy.io.fits as fits
 import dill
 import numpy as np
 import pandas as pd
+from astropy.io import fits
 from exovista import (
     Settings,
     generate_disks,
@@ -183,7 +183,7 @@ def generate_systems(
     else:
         stars, _ = load_stars.load_stars(targetlist, from_master=True)
         nexozodis = np.full(len(stars), nexozodis)
-    print("\n{0:d} stars in model ranges.".format(len(stars)))
+    print(f"\n{len(stars):d} stars in model ranges.")
 
     planets, albedos = generate_planets.generate_planets(
         stars, settings, force_earth=False
@@ -203,7 +203,7 @@ def generate_systems(
     pool = multiprocessing.Pool(cores)
 
     inputs = []
-    for i in range(0, cores):
+    for i in range(cores):
         imin = i * percore
         imax = (i + 1) * percore
         inputs.append(
@@ -217,7 +217,7 @@ def generate_systems(
             ]
         )
 
-    pool.starmap(generate_scene.generate_scene, [inputs[j][:] for j in range(0, cores)])
+    pool.starmap(generate_scene.generate_scene, [inputs[j][:] for j in range(cores)])
     pool.close()
     pool.join()
 
@@ -229,7 +229,6 @@ def runcmd(cmd, verbose=False):
     std_out, std_err = process.communicate()
     if verbose:
         print(std_out.strip(), std_err)
-    pass
 
 
 def get_data(universes=np.arange(1, 13), cache_location="data"):

@@ -3,8 +3,8 @@ import astropy.units as u
 import numpy as np
 from astropy.time import Time
 
-import exoverses.util.misc as misc
 from exoverses.base.planet import Planet
+from exoverses.util import misc
 
 
 class FitPlanet(Planet):
@@ -40,7 +40,7 @@ class FitPlanet(Planet):
         # Finding the mean anomaly at time of conjunction
         nu_p = (np.pi / 2 * u.rad - self.w_s) % (2 * np.pi * u.rad)
         E_p = 2 * np.arctan2(
-            np.sqrt((1 - self.e)) * np.tan(nu_p / 2), np.sqrt((1 + self.e))
+            np.sqrt(1 - self.e) * np.tan(nu_p / 2), np.sqrt(1 + self.e)
         )
         self.M0 = (E_p - self.e * np.sin(E_p) * u.rad) % (2 * np.pi * u.rad)
         self.t0 = Time(self.T_c.jd, format="jd")
