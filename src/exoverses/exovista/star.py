@@ -6,7 +6,7 @@ from astropy.io.fits import getdata
 from astropy.time import Time
 from scipy.interpolate import RectBivariateSpline
 
-import exoverses.base as base
+from exoverses import base
 
 
 class ExovistaStar(base.star.Star):
