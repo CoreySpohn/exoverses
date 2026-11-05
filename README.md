@@ -1,5 +1,9 @@
 # exo(planet uni)verses
 
+> **Deprecated.** exoverses is no longer maintained. Load ExoVista systems with
+> `skyscapes.io.from_exovista` from [skyscapes](https://github.com/CoreySpohn/skyscapes)
+> instead. The last release, 0.4.1, stays installable from PyPI.
+
 A python library to create a (relatively) uniform set of objects between tools that generate planetary systems. Currently supports ExoVista and EXOSIMS universes.
 
 # Install
